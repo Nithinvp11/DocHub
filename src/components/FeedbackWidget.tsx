@@ -32,6 +32,8 @@ interface FeedbackWidgetProps {
 export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     type: 'GENERAL',
     category: '',
@@ -53,6 +55,19 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
 
     if (!formData.title || !formData.description) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Client-side rating validation (defensive)
+    if (formData.rating !== 0 && (formData.rating < 1 || formData.rating > 5)) {
+      toast.error('Rating must be between 1 and 5');
+      return;
+    }
+
+    // Prevent submit during server-enforced cooldown
+    if (cooldownUntil && Date.now() < cooldownUntil) {
+      const seconds = Math.ceil((cooldownUntil - Date.now()) / 1000);
+      toast.error(`Too many submissions. Try again in ${seconds}s`);
       return;
     }
 
@@ -80,12 +95,25 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
           // ignore parse errors
         }
 
+        // If rate-limited, respect Retry-After and set a local cooldown
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After');
-          if (retryAfter) errMsg += ` — try again in ${retryAfter} seconds`;
+          if (retryAfter) {
+            const seconds = parseInt(retryAfter, 10) || 3600;
+            setCooldownUntil(Date.now() + seconds * 1000);
+            // clear cooldown after expiry so UI re-enables
+            setTimeout(() => setCooldownUntil(null), seconds * 1000);
+            errMsg += ` — try again in ${seconds} seconds`;
+          }
         }
 
-        console.error('Feedback submission failed:', response.status, errMsg);
+        // Log only server/internal errors as console.error to avoid noisy devtools errors for expected 4xx responses
+        if (response.status >= 500) {
+          console.error('Feedback submission failed:', response.status, errMsg);
+        } else {
+          console.warn('Feedback submission failed (client/server validation):', response.status, errMsg);
+        }
+
         toast.error(errMsg);
         setLoading(false);
         return;
@@ -276,9 +304,9 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
             <Button
               type="submit"
               className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
-              disabled={loading}
+              disabled={loading || (cooldownUntil !== null && Date.now() < cooldownUntil)}
             >
-              {loading ? 'Submitting...' : 'Submit Feedback'}
+              {loading ? 'Submitting...' : cooldownUntil && Date.now() < cooldownUntil ? 'Try later' : 'Submit Feedback'}
             </Button>
           </div>
         </form>
