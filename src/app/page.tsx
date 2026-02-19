@@ -212,22 +212,25 @@ export default function Home() {
             >
               <PremiumBadge variant="primary" showDot>
                 <Sparkles className="h-4 w-4" />
-                Git-Native Documentation Platform
+                Collaborative Documentation Platform
               </PremiumBadge>
             </motion.div>
 
             {/* Heading */}
-            <motion.h1
-              className="mb-6 text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-            >
-              DocHub for
-              <span className="mt-2 block bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-                Engineering Teams
-              </span>
-            </motion.h1>
+            <div className="mb-6">
+              <div className="mb-2 text-sm font-semibold text-purple-300">DocHub</div>
+              <motion.h1
+                className="text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
+                Collaborative Documentation
+                <span className="mt-2 block bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+                  Built for Engineers
+                </span>
+              </motion.h1>
+            </div>
 
             {/* Description */}
             <motion.p
@@ -242,7 +245,7 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <motion.div
-              className="flex flex-col justify-center gap-4 sm:flex-row"
+              className="flex justify-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
@@ -250,24 +253,14 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="group relative overflow-hidden bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-10 py-5 text-lg text-white shadow-2xl ring-1 ring-purple-600/30 transition-all hover:scale-105 hover:shadow-2xl hover:ring-2"
               >
                 <Link href="/auth">
-                  <span className="relative z-10 flex items-center gap-2">
+                  <span className="relative z-10 flex items-center gap-3">
                     Get Started Free
                     <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-fuchsia-500 opacity-0 transition-opacity group-hover:opacity-100" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                className="border-2 border-purple-400/50 bg-white/10 text-white backdrop-blur-sm transition-all hover:scale-105 hover:border-purple-400 hover:bg-white/20 hover:shadow-lg hover:shadow-purple-500/20"
-              >
-                <Link href="/dashboard">
-                  View Dashboard
-                  <Rocket className="h-5 w-5" />
                 </Link>
               </Button>
             </motion.div>
@@ -300,7 +293,7 @@ export default function Home() {
 
       {/* Features Section */}
       <motion.div
-        className="mx-auto max-w-7xl px-6 py-24 lg:px-8"
+        className="mx-auto max-w-7xl px-6 pt-24 pb-32 lg:px-8"
         variants={staggerContainer}
         initial="initial"
         whileInView="animate"
@@ -418,54 +411,6 @@ export default function Home() {
             </PremiumCard>
           </motion.div>
         </div>
-      </motion.div>
-
-      {/* CTA Section */}
-      <motion.div
-        className="mx-auto max-w-7xl px-6 py-24 lg:px-8"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-      >
-        <PremiumCard
-          className="border-purple-500/30 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl"
-          variant="glass"
-        >
-          <div className="px-6 py-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-white">
-              Ready to transform your documentation?
-            </h2>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-purple-200/80">
-              Join teams using DocHub to build better documentation together
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="group relative overflow-hidden bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40"
-              >
-                <Link href="/auth">
-                  <span className="relative z-10 flex items-center gap-2">
-                    Start for Free
-                    <Rocket className="h-5 w-5 transition-transform group-hover:scale-110" />
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-fuchsia-500 opacity-0 transition-opacity group-hover:opacity-100" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                className="border-2 border-purple-400/50 bg-white/10 text-white backdrop-blur-sm transition-all hover:border-purple-400 hover:bg-white/20 hover:shadow-lg hover:shadow-purple-500/20"
-              >
-                <Link href="/api-docs">
-                  View API Docs
-                  <Code2 className="h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </PremiumCard>
       </motion.div>
     </div>
   );
