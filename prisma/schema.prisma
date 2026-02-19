@@ -1,0 +1,1071 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id                String    @id @default(cuid())
+  username          String?   @unique // Custom username with letters, numbers, and _
+  usernameChangedAt DateTime? // Track when username was last changed
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String? // Hashed password for email/password auth
+  githubLinked      Boolean   @default(false) // Whether GitHub account is linked
+
+  // Enhanced GitHub OAuth fields
+  githubUserId         Int? // GitHub user ID
+  githubUsername       String? // GitHub username
+  githubAvatarUrl      String? // GitHub avatar URL
+  githubProfileUrl     String? // GitHub profile URL
+  githubEmail          String? // GitHub primary email
+  githubTokenScopes    String[] // OAuth token scopes
+  githubTokenExpiresAt DateTime? // Token expiration
+
+  role      UserRole @default(USER) // USER or ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts                Account[]
+  sessions                Session[]
+  ownedWorkspaces         Workspace[]              @relation("WorkspaceOwner")
+  workspaces              WorkspaceMember[]
+  documents               Document[]
+  versions                Version[]
+  comments                Comment[]
+  activities              Activity[]
+  notifications           Notification[]
+  githubAuth              GitHubAuth[]
+  templates               DocumentTemplate[]
+  mentions                Mention[]
+  inlineComments          InlineComment[]          @relation("InlineCommentAuthor")
+  resolvedComments        InlineComment[]          @relation("InlineCommentResolver")
+  commentReplies          InlineCommentReply[]
+  favorites               UserFavorite[]
+  recentDocuments         RecentDocument[]
+  presence                Presence[]
+  documentLocks           DocumentLock[]
+  notificationPreferences NotificationPreferences?
+  feedback                Feedback[]
+  assignedFeedback        Feedback[]               @relation("FeedbackAssignee")
+  resolvedConflicts       ConflictResolution[]     @relation("ConflictResolver")
+  uploadedImages          UploadedImage[]
+  invitesSent             WorkspaceInvite[]        @relation("InvitedBy")
+  invitesReceived         WorkspaceInvite[]        @relation("InvitedUser")
+
+  @@index([githubUserId])
+  @@index([githubUsername])
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Workspace model
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String // Workspace owner (single user)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner             User                        @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members           WorkspaceMember[]
+  documents         Document[]
+  githubRepos       GitHubRepo[]
+  activities        Activity[]
+  tags              Tag[]
+  templates         DocumentTemplate[]
+  syncQueue         SyncQueue[]
+  webhooks          GitHubWebhook[]
+  githubIntegration WorkspaceGitHubIntegration?
+  uploadedImages    UploadedImage[]
+  invites           WorkspaceInvite[]
+
+  @@index([updatedAt])
+  @@index([ownerId])
+}
+
+// Workspace membership with explicit permissions (capability-based)
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  permissions String[] // Explicit capability-based permissions
+  grantedById String? // Direct delegator/inviter who created this membership
+  grantRootId String? // Root delegator at top of delegation chain
+  grantDepth  Int      @default(0) // Delegation depth from root
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([permissions])
+  @@index([grantedById])
+  @@index([grantRootId])
+}
+
+// Workspace-level GitHub Integration for document syncing
+model WorkspaceGitHubIntegration {
+  id               String    @id @default(cuid())
+  workspaceId      String    @unique // One integration per workspace
+  repository       String // Format: "owner/repo"
+  branch           String    @default("main")
+  basePath         String    @default("docs") // Base directory in repo for documents
+  webhookSecret    String? // Auto-generated secret for verifying webhook signatures
+  webhookId        String? // GitHub webhook ID (returned from GitHub API)
+  webhookUrl       String? // Full webhook URL created in GitHub
+  webhookActive    Boolean   @default(true) // Whether webhook is active
+  webhookCreatedAt DateTime? // When webhook was created in GitHub
+  webhookUpdatedAt DateTime? // When webhook was last updated
+  connectedAt      DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([repository])
+  @@index([webhookId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// Document model with versioning
+model Document {
+  id          String        @id @default(cuid())
+  title       String
+  content     String        @db.Text
+  path        String // Virtual file path in workspace
+  phase       DocumentPhase @default(PLANNING) // Phase: Planning, Development, etc.
+  type        DocumentType  @default(GENERAL) // Type: Spec, Meeting Log, etc.
+  workspaceId String
+  authorId    String
+  parentId    String? // For nested documents/folders
+
+  // Enhanced features
+  emoji       String? // Document icon emoji
+  coverImage  String? // Cover image URL
+  status      DocumentStatus @default(DRAFT)
+  properties  Json? // Custom properties (flexible key-value)
+  diagrams    Json? // Embedded diagrams (Excalidraw/Mermaid data)
+  wordCount   Int            @default(0)
+  readingTime Int            @default(0) // Minutes
+
+  // GitHub integration fields
+  githubPath          String? // Automated GitHub file path
+  githubSha           String? // Last synced commit SHA
+  githubAutoGenerated Boolean @default(false) // Whether path was auto-generated
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastViewedAt DateTime? // Track recent access
+
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author         User                 @relation(fields: [authorId], references: [id])
+  parent         Document?            @relation("DocumentChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Document[]           @relation("DocumentChildren")
+  versions       Version[]
+  comments       Comment[]
+  syncInfo       DocSyncInfo?
+  tags           DocumentTag[]
+  linkedFrom     DocumentLink[]       @relation("LinkedDocument")
+  linksTo        DocumentLink[]       @relation("SourceDocument")
+  mentions       Mention[]
+  favorites      UserFavorite[]
+  inlineComments InlineComment[]
+  recentAccess   RecentDocument[]
+  lock           DocumentLock? // Editing lock
+  syncQueue      SyncQueue[] // Background sync queue
+  conflicts      ConflictResolution[] // Conflict tracking
+  syncEvents     SyncEvent[] // Sync event history
+
+  @@unique([workspaceId, path])
+  @@index([workspaceId])
+  @@index([authorId])
+  @@index([updatedAt])
+  @@index([parentId])
+  @@index([status])
+  @@index([lastViewedAt])
+  @@index([githubPath])
+}
+
+enum DocumentPhase {
+  PLANNING
+  DEVELOPMENT
+  REVIEW
+  COMPLETE
+  ARCHIVED
+}
+
+enum DocumentType {
+  GENERAL
+  SPECIFICATION
+  MEETING_NOTES
+  API_DOCS
+  GUIDE
+  RFC
+  TEMPLATE
+  FOLDER
+}
+
+enum DocumentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Version control model
+model Version {
+  id         String   @id @default(cuid())
+  documentId String
+  content    String   @db.Text
+  diff       String?  @db.Text // Stores the diff from previous version
+  message    String // Commit message
+  sha        String? // SHA-256 hash of content (like Git)
+  label      String? // Optional label for important versions (e.g., "Stable release")
+  authorId   String
+  version    Int // Sequential version number
+  isAutoSave Boolean  @default(false) // Auto-save vs manual save
+  isDraft    Boolean  @default(false) // Draft version (auto-saves)
+  createdAt  DateTime @default(now())
+
+  document Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author   User         @relation(fields: [authorId], references: [id])
+  tags     VersionTag[]
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@index([sha])
+  @@index([createdAt])
+  @@index([authorId])
+  @@index([isAutoSave])
+  @@index([isDraft])
+}
+
+// Version tags for categorizing versions
+model VersionTag {
+  id          String   @id @default(cuid())
+  versionId   String
+  name        String // "v1.0-stable", "final", "draft"
+  color       String   @default("#3B82F6") // Hex color
+  description String?
+  createdAt   DateTime @default(now())
+
+  version Version @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, name])
+  @@index([versionId])
+}
+
+// Comment model for collaboration
+model Comment {
+  id         String   @id @default(cuid())
+  documentId String
+  authorId   String
+  content    String   @db.Text
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id])
+
+  @@index([documentId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([documentId, resolved])
+  @@index([resolved])
+}
+
+// GitHub integration model
+model GitHubRepo {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  repoOwner      String
+  repoName       String
+  installationId Int? // GitHub App installation ID
+  accessToken    String?   @db.Text
+  lastSyncedAt   DateTime?
+
+  // Enhanced sync configuration
+  syncMode             String  @default("direct") // "direct" or "pull_request"
+  autoSyncOnSave       Boolean @default(false)
+  syncDebounceMs       Int     @default(5000)
+  defaultCommitMessage String  @default("docs: update documentation")
+  autoCreatePR         Boolean @default(false)
+  prTemplate           String? @db.Text
+
+  // Webhook management
+  webhookId      String?
+  webhookSecret  String?
+  hasWriteAccess Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pullRequests GitHubPullRequest[]
+  issues       GitHubIssue[]
+  webhooks     GitHubWebhook[]
+  syncQueue    SyncQueue[]
+
+  @@unique([workspaceId, repoOwner, repoName])
+}
+
+// GitHub Pull Request tracking
+model GitHubPullRequest {
+  id           String  @id @default(cuid())
+  repoId       String
+  number       Int
+  title        String
+  body         String? @db.Text
+  state        String // open, closed, merged
+  author       String
+  authorAvatar String?
+  htmlUrl      String
+
+  // Enhanced PR tracking
+  linkedDocumentIds String[] // IDs of documents linked to this PR
+  affectedFiles     String[] // File paths modified by the PR
+  autoCreated       Boolean  @default(false) // Whether PR was auto-created by the system
+
+  createdAt DateTime
+  updatedAt DateTime
+  closedAt  DateTime?
+  mergedAt  DateTime?
+  syncedAt  DateTime  @default(now())
+
+  repo       GitHubRepo  @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  syncEvents SyncEvent[]
+
+  @@unique([repoId, number])
+  @@index([repoId, state])
+  @@index([updatedAt])
+  @@index([linkedDocumentIds])
+  @@index([state])
+  @@index([createdAt])
+}
+
+// GitHub Issue tracking
+model GitHubIssue {
+  id           String    @id @default(cuid())
+  repoId       String
+  number       Int
+  title        String
+  body         String?   @db.Text
+  state        String // open, closed
+  author       String
+  authorAvatar String?
+  htmlUrl      String
+  labels       String[] // Array of label names
+  createdAt    DateTime
+  updatedAt    DateTime
+  closedAt     DateTime?
+  syncedAt     DateTime  @default(now())
+
+  repo GitHubRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, number])
+  @@index([repoId, state])
+  @@index([updatedAt])
+  @@index([state])
+  @@index([createdAt])
+}
+
+// Activity feed model
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  actorId     String
+  workspaceId String
+  entityType  String // "Document", "Comment", "Version", "GitHubPR", "GitHubIssue"
+  entityId    String
+  metadata    Json? // Additional context (e.g., document title, PR number)
+  createdAt   DateTime     @default(now())
+
+  actor     User      @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+enum ActivityType {
+  DOCUMENT_CREATED
+  DOCUMENT_UPDATED
+  DOCUMENT_DELETED
+  VERSION_CREATED
+  COMMENT_ADDED
+  COMMENT_RESOLVED
+  MEMBER_ADDED
+  MEMBER_REMOVED
+  GITHUB_PR_OPENED
+  GITHUB_PR_UPDATED
+  GITHUB_PR_MERGED
+  GITHUB_PR_CLOSED
+  GITHUB_ISSUE_OPENED
+  GITHUB_ISSUE_UPDATED
+  GITHUB_ISSUE_CLOSED
+  GITHUB_REPO_CONNECTED
+  GITHUB_REPO_DISCONNECTED
+  GITHUB_REPO_SYNCED
+  GITHUB_SYNC_STARTED
+  GITHUB_SYNC_SUCCESS
+  GITHUB_SYNC_FAILED
+  GITHUB_CONFLICT_DETECTED
+  GITHUB_PULL_REQUEST_CREATED
+  DOCUMENT_LINKED
+  DOCUMENT_MENTIONED
+  DOCUMENT_STATUS_CHANGED
+  TAG_ADDED
+  TAG_REMOVED
+  WORKSPACE_CREATED
+  WORKSPACE_DELETED
+  OWNERSHIP_TRANSFERRED
+  MEMBER_INVITED
+  INVITE_SENT
+  INVITE_RESENT
+  INVITE_CANCELLED
+  INVITE_ACCEPTED
+  INVITE_REJECTED
+  PASSWORD_CHANGED
+  ACCOUNT_DELETED
+  GITHUB_IMPORT
+  GITHUB_EXPORT
+}
+
+// Notification model
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  COMMENT_MENTION
+  DOCUMENT_SHARED
+  GITHUB_PR_REVIEW
+  GITHUB_ISSUE_ASSIGNED
+  VERSION_CONFLICT
+  FEEDBACK_RECEIVED
+  WORKSPACE_INVITE // Legacy - use WORKSPACE_INVITE_RECEIVED
+  WORKSPACE_INVITE_RECEIVED
+  WORKSPACE_INVITE_ACCEPTED
+  WORKSPACE_INVITE_REJECTED
+  WORKSPACE_INVITE_CANCELLED
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  MEMBER_REMOVED
+}
+
+// GitHub Two-Way Sync Models
+
+// GitHub Authentication & Token Management
+model GitHubAuth {
+  id             String    @id @default(cuid())
+  userId         String
+  workspaceId    String
+  accessToken    String    @db.Text // Encrypted GitHub OAuth token
+  refreshToken   String?   @db.Text // Encrypted refresh token
+  scope          String? // OAuth scopes granted
+  tokenType      String    @default("Bearer")
+  expiresAt      DateTime? // Token expiration time
+  installationId Int? // GitHub App installation ID (if using GitHub App)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+// Document-GitHub Sync Tracking (Two-Way)
+model DocSyncInfo {
+  id                 String           @id @default(cuid())
+  documentId         String           @unique // One-to-one with Document
+  workspaceId        String
+  githubRepository   String // "owner/repo"
+  githubBranch       String           @default("main")
+  githubPath         String // File path in repo (e.g., "docs/spec.md")
+  lastSyncedAt       DateTime? // Last successful sync time
+  externalVersion    Int              @default(0) // Version counter from GitHub
+  derivedVersion     Int              @default(0) // Version counter on platform
+  lastExternalHash   String? // SHA of last synced GitHub content
+  lastDerivedHash    String? // SHA of last synced platform content
+  lastCommitSha      String? // GitHub commit SHA from last sync
+  lastCommitUrl      String? // GitHub commit URL from last sync
+  autoSync           Boolean          @default(false) // Auto-sync on changes
+  syncDirection      SyncDirection    @default(BIDIRECTIONAL)
+  conflictResolution ConflictStrategy @default(MANUAL)
+  syncStatus         SyncStatus       @default(SYNCED)
+  lastError          String?          @db.Text // Last sync error message
+  errorCount         Int              @default(0) // Consecutive error count
+  needSyncToGitHub   Boolean          @default(false) // Platform has newer changes
+  needSyncFromGitHub Boolean          @default(false) // GitHub has newer changes
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  document   Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  syncEvents SyncEvent[]
+  conflicts  ConflictResolution[]
+
+  @@index([workspaceId])
+  @@index([githubRepository, githubBranch])
+  @@index([syncStatus])
+  @@index([needSyncToGitHub])
+  @@index([needSyncFromGitHub])
+  @@index([lastSyncedAt])
+}
+
+enum SyncDirection {
+  TO_GITHUB // One-way: Platform → GitHub
+  FROM_GITHUB // One-way: GitHub → Platform
+  BIDIRECTIONAL // Two-way sync
+}
+
+enum ConflictStrategy {
+  MANUAL // Require user to resolve conflicts
+  LAST_WRITE_WINS // Most recent change wins
+  PLATFORM_WINS // Platform version always wins
+  GITHUB_WINS // GitHub version always wins
+}
+
+enum SyncStatus {
+  SYNCED // In sync
+  PENDING // Sync queued
+  SYNCING // Currently syncing
+  CONFLICT // Conflict detected
+  ERROR // Sync failed
+  PAUSED // Sync temporarily disabled
+}
+
+// Sync Event Log (for debugging & audit)
+model SyncEvent {
+  id         String  @id @default(cuid())
+  syncInfoId String
+  eventType  String // "push", "pull_request", "manual_sync", etc.
+  direction  String // "to_github", "from_github"
+  status     String // "success", "failure", "conflict"
+  message    String? @db.Text // Event details or error message
+  metadata   Json? // Additional event data (commit SHA, PR number, etc.)
+
+  // Enhanced tracking
+  documentId String? // Related document
+  commitSha  String? // GitHub commit SHA
+  prNumber   Int? // Pull request number if applicable
+  prId       String? // Pull request ID reference
+
+  createdAt DateTime @default(now())
+
+  syncInfo    DocSyncInfo        @relation(fields: [syncInfoId], references: [id], onDelete: Cascade)
+  document    Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pullRequest GitHubPullRequest? @relation(fields: [prId], references: [id], onDelete: SetNull)
+
+  @@index([syncInfoId, createdAt])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([documentId])
+  @@index([commitSha])
+  @@index([prNumber])
+}
+
+// Tags for document organization
+model Tag {
+  id          String   @id @default(cuid())
+  name        String
+  color       String   @default("#3B82F6") // Hex color
+  workspaceId String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents DocumentTag[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+// Many-to-many relationship between Documents and Tags
+model DocumentTag {
+  id         String   @id @default(cuid())
+  documentId String
+  tagId      String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, tagId])
+  @@index([documentId])
+  @@index([tagId])
+}
+
+// Document Templates
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  content     String   @db.Text
+  emoji       String?
+  coverImage  String?
+  category    String   @default("General")
+  isPublic    Boolean  @default(false)
+  workspaceId String? // Null for global templates
+  authorId    String
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User       @relation(fields: [authorId], references: [id])
+
+  @@index([workspaceId])
+  @@index([category])
+  @@index([isPublic])
+  @@index([usageCount])
+  @@index([category, isPublic])
+}
+
+// Document Links (bidirectional linking)
+model DocumentLink {
+  id               String   @id @default(cuid())
+  sourceDocumentId String
+  linkedDocumentId String
+  createdAt        DateTime @default(now())
+
+  sourceDocument Document @relation("SourceDocument", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  linkedDocument Document @relation("LinkedDocument", fields: [linkedDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceDocumentId, linkedDocumentId])
+  @@index([sourceDocumentId])
+  @@index([linkedDocumentId])
+}
+
+// @Mentions in documents
+model Mention {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  position   Int // Character position in document
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+// Inline Comments on selected text
+model InlineComment {
+  id              String    @id @default(cuid())
+  documentId      String
+  authorId        String
+  content         String    @db.Text
+  startOffset     Int // Start position of highlighted text
+  endOffset       Int // End position of highlighted text
+  highlightedText String    @db.Text // The text that was highlighted
+  resolved        Boolean   @default(false)
+  resolvedById    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  document   Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author     User                 @relation("InlineCommentAuthor", fields: [authorId], references: [id])
+  resolvedBy User?                @relation("InlineCommentResolver", fields: [resolvedById], references: [id])
+  replies    InlineCommentReply[]
+
+  @@index([documentId])
+  @@index([authorId])
+  @@index([resolved])
+  @@index([documentId, resolved])
+  @@index([createdAt])
+}
+
+// Replies to inline comments
+model InlineCommentReply {
+  id        String   @id @default(cuid())
+  commentId String
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comment InlineComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  author  User          @relation(fields: [authorId], references: [id])
+
+  @@index([commentId])
+  @@index([authorId])
+}
+
+// User Favorites
+model UserFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId])
+  @@index([documentId])
+}
+
+// Recent Documents Access
+model RecentDocument {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  accessedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId, accessedAt])
+}
+
+// Presence tracking for live collaboration
+model Presence {
+  id          String   @id @default(cuid())
+  userId      String
+  documentId  String?
+  workspaceId String?
+  socketId    String // WebSocket connection identifier
+  cursor      Json? // Cursor position { x, y, selection }
+  lastSeen    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, socketId])
+  @@index([documentId])
+  @@index([workspaceId])
+  @@index([lastSeen])
+  @@index([userId])
+}
+
+// Connection Requests (LinkedIn-style)
+// Scheduled Sync Jobs
+model SyncSchedule {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  name           String
+  schedule       String // Cron expression (e.g., "0 * * * *" for hourly)
+  direction      String // "push", "pull", "both"
+  enabled        Boolean   @default(true)
+  lastRunAt      DateTime?
+  lastRunStatus  String? // "SUCCESS", "FAILED", "PARTIAL"
+  lastRunSummary Json? // Summary of last run (success count, errors, etc.)
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([enabled])
+  @@index([lastRunAt])
+}
+
+// Document Lock model for edit locking
+model DocumentLock {
+  id         String   @id @default(cuid())
+  documentId String   @unique // One lock per document
+  userId     String // User who holds the lock
+  acquiredAt DateTime @default(now())
+  expiresAt  DateTime // Auto-release after timeout
+  lastPingAt DateTime @default(now()) // Heartbeat to keep lock alive
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([expiresAt]) // For cleanup of expired locks
+}
+
+// Notification Preferences model
+model NotificationPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // In-app notifications
+  commentMention      Boolean @default(true)
+  documentShared      Boolean @default(true)
+  githubPrReview      Boolean @default(true)
+  githubIssueAssigned Boolean @default(true)
+  versionConflict     Boolean @default(true)
+  workspaceInvite     Boolean @default(true)
+
+  // Email notifications (for future implementation)
+  emailCommentMention      Boolean @default(false)
+  emailDocumentShared      Boolean @default(false)
+  emailGithubPrReview      Boolean @default(false)
+  emailGithubIssueAssigned Boolean @default(false)
+  emailVersionConflict     Boolean @default(true)
+  emailWorkspaceInvite     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// User Feedback model
+model Feedback {
+  id          String           @id @default(cuid())
+  userId      String?
+  type        FeedbackType     @default(GENERAL)
+  category    String? // Bug, Feature Request, UI/UX, Performance, etc.
+  title       String
+  description String           @db.Text
+  rating      Int? // 1-5 star rating (optional)
+  status      FeedbackStatus   @default(NEW)
+  priority    FeedbackPriority @default(MEDIUM)
+  url         String? // Page URL where feedback was submitted
+  userAgent   String? // Browser/device info
+  screenshot  String? // Optional screenshot URL
+  adminNotes  String?          @db.Text
+  assignedTo  String? // Admin user ID
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  resolvedAt  DateTime?
+
+  user     User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignee User? @relation("FeedbackAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([status, priority])
+  @@index([priority])
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  IMPROVEMENT
+  GENERAL
+  QUESTION
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REJECTED
+}
+
+enum FeedbackPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Background sync queue for asynchronous GitHub operations
+model SyncQueue {
+  id           String  @id @default(cuid())
+  documentId   String
+  workspaceId  String
+  operation    String // "push", "pull", "create", "update"
+  priority     Int     @default(0)
+  status       String  @default("pending") // "pending", "processing", "completed", "failed"
+  attemptCount Int     @default(0)
+  maxAttempts  Int     @default(3)
+  error        String? @db.Text
+  metadata     Json? // Operation-specific metadata
+
+  scheduledAt DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  document  Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  repo      GitHubRepo? @relation(fields: [repoId], references: [id], onDelete: SetNull)
+  repoId    String?
+
+  @@index([status, priority(sort: Desc)])
+  @@index([documentId])
+  @@index([workspaceId])
+  @@index([scheduledAt])
+}
+
+// GitHub webhook management
+model GitHubWebhook {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  repoId          String
+  githubWebhookId String    @unique // GitHub's webhook ID
+  secret          String
+  events          String[] // List of subscribed events
+  active          Boolean   @default(true)
+  lastDeliveryAt  DateTime?
+  lastStatus      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  repo      GitHubRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([repoId])
+  @@index([workspaceId])
+}
+
+// Conflict resolution tracking
+model ConflictResolution {
+  id            String    @id @default(cuid())
+  documentId    String
+  syncInfoId    String
+  localContent  String    @db.Text
+  remoteContent String    @db.Text
+  localSha      String
+  remoteSha     String
+  status        String    @default("pending") // "pending", "resolved", "cancelled"
+  resolution    String?   @db.Text // Merged content after resolution
+  resolvedBy    String?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  document Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  syncInfo DocSyncInfo @relation(fields: [syncInfoId], references: [id], onDelete: Cascade)
+  resolver User?       @relation("ConflictResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Uploaded images with workspace association
+model UploadedImage {
+  id          String   @id @default(cuid())
+  filename    String // e.g., "abc123.png"
+  url         String // e.g., "/uploads/images/abc123.png"
+  size        Int // File size in bytes
+  contentType String // MIME type
+  hash        String // MD5 hash for deduplication (unique per workspace)
+  uploadedBy  String
+  workspaceId String
+  createdAt   DateTime @default(now())
+
+  uploader  User      @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, hash]) // Hash is unique per workspace
+  @@index([workspaceId])
+  @@index([uploadedBy])
+  @@index([createdAt])
+  @@index([hash])
+}
+
+// Workspace Invitations
+model WorkspaceInvite {
+  id            String                @id @default(cuid())
+  workspaceId   String
+  invitedEmail  String? // For inviting users not yet registered
+  invitedUserId String? // For inviting existing users
+  invitedById   String
+  grantRootId   String? // Root delegator of this invitation chain
+  status        WorkspaceInviteStatus @default(PENDING)
+  message       String? // Optional invitation message
+  permissions   String[] // Permissions to grant upon acceptance
+  resendCount   Int                   @default(0)
+  lastResentAt  DateTime?
+  cancelledAt  DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  expiresAt     DateTime? // Optional expiration date
+  acceptedAt    DateTime?
+  rejectedAt    DateTime?
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser User?     @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([invitedEmail])
+  @@index([invitedUserId])
+  @@index([invitedById])
+  @@index([grantRootId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WorkspaceInviteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
