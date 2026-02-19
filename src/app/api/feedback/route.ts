@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
 
     const userIsAdmin = user?.role === 'ADMIN';
 
+    // DEBUG: help developers see why admin requests may be filtered
+    console.debug('[GET /api/feedback] currentUserId=', currentUser.id, 'userIsAdmin=', userIsAdmin, 'adminParam=', isAdmin);
+
     // Build query
     const where: Prisma.FeedbackWhereInput = {};
 
