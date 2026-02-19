@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/session';
 
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { rateLimit } from '@/lib/rate-limit';
+import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { NotificationService } from '@/lib/notifications';
 
 // GET /api/feedback - Get all feedback (admin only) or user's own feedback
@@ -80,13 +80,13 @@ export async function GET(request: NextRequest) {
 // POST /api/feedback - Submit new feedback
 export async function POST(request: NextRequest) {
   try {
+    // Allow anonymous feedback: user may be null
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     // Rate limiting: 3 feedback submissions per hour (prevent spam)
-    const identifier = user.id;
+    // - If user is logged in, rate-limit by user id
+    // - Otherwise rate-limit by client identifier (IP / user-agent hash)
+    const identifier = user ? user.id : getClientIdentifier(request);
     const rateLimitResult = await rateLimit(identifier, 3, 3600000); // 1 hour
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -114,7 +114,8 @@ export async function POST(request: NextRequest) {
     // Create feedback
     const feedback = await prisma.feedback.create({
       data: {
-        userId: user.id,
+        // allow anonymous submissions (userId nullable in schema)
+        userId: user?.id ?? null,
         type,
         category,
         title,
@@ -138,14 +139,17 @@ export async function POST(request: NextRequest) {
 
     // Notify all admin users about new feedback (non-blocking)
     try {
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true, name: true, email: true } });
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { id: true, name: true, email: true },
+      });
       await Promise.all(
         admins.map((admin) =>
           NotificationService.notifyFeedbackReceived(
             admin.id,
             feedback.title,
             feedback.id,
-            user.name || user.email
+            user?.name || user?.email || 'Anonymous'
           )
         )
       );
