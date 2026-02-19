@@ -218,29 +218,35 @@ export default function Home() {
 
             {/* Heading */}
             <div className="mb-6">
-              <div className="mb-2 text-sm font-semibold text-purple-300">DocHub</div>
               <motion.h1
-                className="text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl"
-                initial={{ opacity: 0, y: 20 }}
+                className="mb-4 text-5xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-6xl"
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
               >
-                Collaborative Documentation
-                <span className="mt-2 block bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-                  Built for Engineers
-                </span>
+                DocHub
               </motion.h1>
+
+              <motion.div
+                className="mx-auto max-w-3xl text-center text-4xl font-semibold leading-tight bg-clip-text text-transparent sm:text-5xl lg:text-5xl"
+                style={{ backgroundImage: 'linear-gradient(90deg,#a78bfa,#fb7185)' }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.5 }}
+              >
+                Collaborative Documentation Platform
+              </motion.div>
             </div>
 
             {/* Description */}
             <motion.p
               className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-purple-100/90"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
+              transition={{ delay: 0.45, duration: 0.55 }}
             >
-              Collaborate on documentation with Git-like versioning, real-time editing, and seamless
-              GitHub integration. Built for developers, by developers.
+              A unified workspace for version-controlled documentation, real-time collaboration, and
+              granular access control — built for modern engineering teams.
             </motion.p>
 
             {/* CTA Buttons */}
