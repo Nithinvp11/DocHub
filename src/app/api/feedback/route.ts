@@ -5,13 +5,18 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { NotificationService } from '@/lib/notifications';
+import { verify } from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key';
 
 // GET /api/feedback - Get all feedback (admin only) or user's own feedback
 export async function GET(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
+    const adminCookie = request.cookies.get('admin-token')?.value;
 
-    if (!currentUser) {
+    // Allow requests authenticated via NextAuth _or_ the admin-token JWT cookie
+    if (!currentUser && !adminCookie) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,22 +27,51 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const isAdmin = searchParams.get('admin') === 'true';
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: currentUser.id },
-      select: { role: true },
-    });
+    // Determine admin status from session (if present) or admin-token
+    let userIsAdmin = false;
+    if (currentUser) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { role: true },
+      });
+      userIsAdmin = dbUser?.role === 'ADMIN';
+    }
 
-    const userIsAdmin = user?.role === 'ADMIN';
+    if (!userIsAdmin && adminCookie) {
+      try {
+        const decoded = verify(adminCookie, JWT_SECRET) as { isAdmin?: boolean };
+        if (decoded?.isAdmin) {
+          userIsAdmin = true;
+          console.debug('[GET /api/feedback] admin access granted via admin-token');
+        }
+      } catch (err) {
+        // ignore invalid admin token
+      }
+    }
+
+    // If the caller requested admin view but is not an admin, block it
+    if (isAdmin && !userIsAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // DEBUG: help developers see why admin requests may be filtered
-    console.debug('[GET /api/feedback] currentUserId=', currentUser.id, 'userIsAdmin=', userIsAdmin, 'adminParam=', isAdmin);
+    console.debug(
+      '[GET /api/feedback] currentUserId=',
+      currentUser?.id ?? 'none',
+      'userIsAdmin=',
+      userIsAdmin,
+      'adminParam=',
+      isAdmin
+    );
 
     // Build query
     const where: Prisma.FeedbackWhereInput = {};
 
-    if (!userIsAdmin || !isAdmin) {
-      // Regular users can only see their own feedback
+    // Non-admin callers only see their own feedback
+    if (!userIsAdmin) {
+      if (!currentUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
       where.userId = currentUser.id;
     }
 

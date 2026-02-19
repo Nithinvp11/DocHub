@@ -1,7 +1,7 @@
 # Permission System Audit Report
 
 Date: 2026-02-17  
-Project: Repo-Aware Knowledge Hub  
+Project: DocHub – Collaborative Documentation Platform  
 Scope: Capability-based workspace permission system verification and enforcement
 
 ## 1) Prisma / Database Verification

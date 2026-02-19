@@ -1,0 +1,101 @@
+// Prisma schema extension for GitHub Two-Way Sync
+// This extends the existing schema with bidirectional sync capabilities
+
+model DocSyncInfo {
+  id                String   @id @default(cuid())
+  
+  // GitHub identifiers
+  url               String   // GitHub URL (e.g., https://github.com/owner/repo/issues/123)
+  githubId          String   // GitHub node_id from GraphQL API
+  githubNumber      Int      // Issue or PR number
+  repository        String   // Format: "owner/repo"
+  
+  // Sync tracking
+  lastModified      DateTime @updatedAt
+  lastGithubUser    String   // Last user who modified in GitHub
+  external          Boolean  @default(false) // Synced from GitHub
+  derived           Boolean  @default(false) // Synced to GitHub
+  externalVersion   Int      @default(0) // GitHub version counter
+  derivedVersion    Int      @default(0) // Local version counter
+  needSync          String?  // Sync direction: 'in' | 'out' | 'both' | null
+  deleted           Boolean  @default(false)
+  error             String?  // Last sync error
+  
+  // Object references
+  objectId          String   // Reference to local Document/Issue/PR
+  objectClass       String   // Class type: 'Document' | 'Issue' | 'PullRequest'
+  workspace         String   // Workspace ID
+  
+  // Metadata
+  metadata          Json?    // Additional sync metadata
+  
+  // Relations
+  document          Document? @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  
+  @@unique([url])
+  @@index([objectId])
+  @@index([workspace])
+  @@index([needSync])
+  @@index([repository])
+  @@index([githubNumber, repository])
+}
+
+model SyncEvent {
+  id              String   @id @default(cuid())
+  eventType       String   // 'push' | 'pull_request' | 'issues' | 'commit'
+  source          String   // 'github' | 'platform'
+  syncInfoId      String?
+  payload         Json     // Full event payload
+  processed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  processedAt     DateTime?
+  error           String?
+  
+  syncInfo        DocSyncInfo? @relation(fields: [syncInfoId], references: [id])
+  
+  @@index([processed])
+  @@index([createdAt])
+  @@index([source, eventType])
+}
+
+model GitHubAuth {
+  id              String   @id @default(cuid())
+  userId          String
+  workspaceId     String
+  
+  // GitHub App installation
+  installationId  Int
+  accessToken     String   // Encrypted
+  refreshToken    String?  // Encrypted
+  expiresAt       DateTime?
+  
+  // Permissions
+  repositories    String[] // List of repo full names with access
+  permissions     Json     // Permission details
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, workspaceId])
+  @@index([installationId])
+}
+
+// Add relation to existing Document model
+model Document {
+  // ... existing fields ...
+  
+  syncInfo        DocSyncInfo[]
+  
+  @@index([path])
+  @@index([workspaceId, path])
+}
+
+// Add relation to existing User model
+model User {
+  // ... existing fields ...
+  
+  githubAuth      GitHubAuth[]
+}

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -525,19 +526,15 @@ export function WorkspaceMembersPanel({
               <span className="text-xs font-semibold text-amber-400 uppercase">Owner</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600">
-                {workspaceOwner.image ? (
-                  <img
-                    src={workspaceOwner.image}
-                    alt={workspaceOwner.name || workspaceOwner.email}
-                    className="h-10 w-10 rounded-full"
-                  />
-                ) : (
-                  <span className="text-sm font-bold text-white">
-                    {(workspaceOwner.name || workspaceOwner.email).charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                <AvatarImage
+                  src={workspaceOwner.image || undefined}
+                  alt={workspaceOwner.name || workspaceOwner.email}
+                />
+                <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white">
+                  {(workspaceOwner.name || workspaceOwner.email).charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold text-white">
@@ -585,7 +582,9 @@ export function WorkspaceMembersPanel({
                 Invite Member
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md border-white/10 bg-slate-900">
+            <DialogContent
+              className={`flex max-h-[85vh] w-[95vw] ${addStep === 'permissions' ? 'max-w-6xl' : 'max-w-2xl'} flex-col border-white/10 bg-slate-900`}
+            >
               <DialogHeader>
                 <DialogTitle className="text-white">
                   {addStep === 'search' && 'Find User'}
@@ -599,65 +598,43 @@ export function WorkspaceMembersPanel({
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Step 1: Search User */}
-              {addStep === 'search' && (
-                <form onSubmit={handleSearchUser} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="userIdentifier" className="text-slate-300">
-                      Username or Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="userIdentifier"
-                        type="text"
-                        placeholder="Search by username or email"
-                        value={userIdentifier}
-                        onChange={(e) => setUserIdentifier(e.target.value)}
-                        className="border-white/10 bg-slate-900/50 pl-10 text-white placeholder:text-slate-500 focus:border-purple-500/50"
-                        required
-                      />
+              <div className="flex-1 overflow-y-auto pr-4">
+                {/* Step 1: Search User */}
+                {addStep === 'search' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userIdentifier" className="text-slate-300">
+                        Username or Email
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="userIdentifier"
+                          type="text"
+                          placeholder="Search by username or email"
+                          value={userIdentifier}
+                          onChange={(e) => setUserIdentifier(e.target.value)}
+                          className="border-white/10 bg-slate-900/50 pl-10 text-white placeholder:text-slate-500 focus:border-purple-500/50"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancelAdd}
-                      className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
-                      disabled={searchingUser}
-                    >
-                      {searchingUser ? 'Searching...' : 'Search User'}
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              {/* Step 2: Confirm User */}
-              {addStep === 'confirm' && foundUser && (
-                <div className="space-y-4">
+                {/* Step 2: Confirm User */}
+                {addStep === 'confirm' && foundUser && (
                   <div className="rounded-lg border border-white/10 bg-slate-900/40 p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/20">
-                        {foundUser.image ? (
-                          <img
-                            src={foundUser.image}
-                            alt={foundUser.name || foundUser.email}
-                            className="h-12 w-12 rounded-full"
-                          />
-                        ) : (
-                          <span className="text-lg font-bold text-white">
-                            {(foundUser.name || foundUser.email).charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
+                      <Avatar className="h-12 w-12 flex-shrink-0">
+                        <AvatarImage
+                          src={foundUser.image || undefined}
+                          alt={foundUser.name || foundUser.email}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-fuchsia-600 text-lg font-bold text-white shadow-lg shadow-purple-500/20">
+                          {(foundUser.name || foundUser.email).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1">
                         <p className="font-semibold text-white">{foundUser.name || 'No name'}</p>
                         <p className="text-sm text-slate-400">{foundUser.email}</p>
@@ -667,30 +644,11 @@ export function WorkspaceMembersPanel({
                       </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setAddStep('search')}
-                      className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleConfirmUser}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
-                    >
-                      Invite This User
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Select Permissions */}
-              {addStep === 'permissions' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
+                {/* Step 3: Select Permissions */}
+                {addStep === 'permissions' && (
+                  <div className="flex flex-col gap-4">
                     <Label className="text-slate-300">Select Permission Packs</Label>
                     <PermissionPackPicker
                       selectedPermissions={selectedPermissions}
@@ -699,28 +657,55 @@ export function WorkspaceMembersPanel({
                         isOwner ? undefined : (userPermissions as WorkspacePermission[])
                       }
                       isOwner={isOwner}
+                      className="flex-1"
                     />
                   </div>
+                )}
+              </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setAddStep('confirm')}
-                      className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleAddMember}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
-                      disabled={loading || selectedPermissions.length === 0}
-                    >
-                      {loading ? 'Sending...' : 'Send Invitation'}
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {/* Sticky Footer */}
+              <div className="mt-4 flex gap-2 border-t border-white/10 pt-4">
+                {addStep !== 'search' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAddStep(addStep === 'permissions' ? 'confirm' : 'search')}
+                    className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
+                  >
+                    Back
+                  </Button>
+                )}
+                {addStep === 'search' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelAdd}
+                    className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (addStep === 'search') {
+                      handleSearchUser(new Event('submit') as any);
+                    } else if (addStep === 'confirm') {
+                      handleConfirmUser();
+                    } else if (addStep === 'permissions') {
+                      handleAddMember();
+                    }
+                  }}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
+                  disabled={
+                    loading || (addStep === 'permissions' && selectedPermissions.length === 0)
+                  }
+                >
+                  {addStep === 'search' && (searchingUser ? 'Searching...' : 'Search User')}
+                  {addStep === 'confirm' && 'Invite This User'}
+                  {addStep === 'permissions' && (loading ? 'Sending...' : 'Send Invitation')}
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         )}
@@ -759,19 +744,15 @@ export function WorkspaceMembersPanel({
                   className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/40 p-3 transition-all hover:border-purple-500/50 hover:bg-slate-900/70"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/20">
-                      {member.user.image ? (
-                        <img
-                          src={member.user.image}
-                          alt={member.user.name || member.user.email}
-                          className="h-10 w-10 rounded-full"
-                        />
-                      ) : (
-                        <span className="text-sm font-bold text-white">
-                          {(member.user.name || member.user.email).charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarImage
+                        src={member.user.image || undefined}
+                        alt={member.user.name || member.user.email}
+                      />
+                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-fuchsia-600 text-sm font-bold text-white shadow-lg shadow-purple-500/20">
+                        {(member.user.name || member.user.email).charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-semibold text-white">
@@ -988,14 +969,14 @@ export function WorkspaceMembersPanel({
 
         {/* Edit Permissions Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl border-white/10 bg-slate-900">
+          <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-6xl flex-col border-white/10 bg-slate-900">
             <DialogHeader>
               <DialogTitle className="text-white">Edit Member Permissions</DialogTitle>
               <DialogDescription className="text-slate-400">
                 Update permission packs for {editingMember?.user.name || editingMember?.user.email}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto pr-4">
               <PermissionPackPicker
                 selectedPermissions={editPermissions}
                 onChange={setEditPermissions}
@@ -1004,25 +985,26 @@ export function WorkspaceMembersPanel({
                 }
                 isOwner={isOwner}
               />
+            </div>
 
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
-                  className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleUpdatePermissions}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
-                  disabled={loading || editPermissions.length === 0}
-                >
-                  {loading ? 'Updating...' : 'Update Permissions'}
-                </Button>
-              </div>
+            {/* Sticky Footer */}
+            <div className="mt-4 flex gap-2 border-t border-white/10 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleUpdatePermissions}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
+                disabled={loading || editPermissions.length === 0}
+              >
+                {loading ? 'Updating...' : 'Update Permissions'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

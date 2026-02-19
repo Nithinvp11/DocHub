@@ -13,6 +13,24 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Allow inline styles for dynamic colors and positioning
+      "react/forbid-dom-props": "off",
+      "react/no-unknown-property": ["error", { ignore: ["style"] }],
+      // Disable Next.js inline style warnings
+      "@next/next/no-img-element": "off",
+      "@next/next/inline-script-id": "off",
+      // Allow any types in GitHub webhook handlers and external API integrations
+      "@typescript-eslint/no-explicit-any": [
+        "error",
+        {
+          ignoreRestArgs: true,
+          fixToUnknown: false,
+        },
+      ],
+    }
+  }
 ]);
 
 export default eslintConfig;

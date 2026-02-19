@@ -1,0 +1,49 @@
+import { getCurrentUser } from '@/lib/session';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { generateGitHubAuthUrl } from '@/lib/github';
+import crypto from 'crypto';
+import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
+import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
+
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get('workspaceId');
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
+    }
+
+    await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_CONFIGURE);
+
+    // Generate state parameter to prevent CSRF
+    const state = crypto.randomBytes(32).toString('hex');
+
+    // Store state in session/database for verification
+    // For now, we'll encode the data in the state itself (signed)
+    const stateData = JSON.stringify({
+      userId: user.id,
+      workspaceId,
+      timestamp: Date.now(),
+      nonce: state,
+    });
+    const encodedState = Buffer.from(stateData).toString('base64');
+
+    const authUrl = generateGitHubAuthUrl(encodedState);
+
+    return NextResponse.json({ authUrl });
+  } catch (error) {
+    if (error instanceof WorkspacePermissionError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

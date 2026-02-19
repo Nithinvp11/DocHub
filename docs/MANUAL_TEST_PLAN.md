@@ -1,4 +1,4 @@
-# Manual Test Plan — Repo-Aware Knowledge Hub
+# Manual Test Plan — DocHub – Collaborative Documentation Platform
 
 **Author:** GitHub Copilot  
 **Date:** 2026-02-18  
@@ -37,7 +37,7 @@
 
 ## Project overview
 
-- Repo-Aware Knowledge Hub is a collaborative documentation platform built with Next.js + TypeScript, Prisma (Postgres), NextAuth, Tailwind and ShadCN UI.
+- DocHub is a collaborative documentation platform built with Next.js + TypeScript, Prisma (Postgres), NextAuth, Tailwind and ShadCN UI.
 - Observed features (code-derived): workspaces (single owner), capability-based permissions, invite-first member flow, documents with versioning & locking, comments/mentions/inline-comments, presence/cursors, notifications & activity logs, GitHub import/export and workspace-level GitHub integration, admin console, uploads, search, favorites.
 - Key security/behavior rules enforced in code: delegation ceiling & chain, centralized permission helpers, owner stored in `Workspace.ownerId` (owner not stored in member table), Zod validation across API routes.
 

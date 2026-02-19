@@ -111,7 +111,11 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
         if (response.status >= 500) {
           console.error('Feedback submission failed:', response.status, errMsg);
         } else {
-          console.warn('Feedback submission failed (client/server validation):', response.status, errMsg);
+          console.warn(
+            'Feedback submission failed (client/server validation):',
+            response.status,
+            errMsg
+          );
         }
 
         toast.error(errMsg);
@@ -306,7 +310,11 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
               className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
               disabled={loading || (cooldownUntil !== null && Date.now() < cooldownUntil)}
             >
-              {loading ? 'Submitting...' : cooldownUntil && Date.now() < cooldownUntil ? 'Try later' : 'Submit Feedback'}
+              {loading
+                ? 'Submitting...'
+                : cooldownUntil && Date.now() < cooldownUntil
+                  ? 'Try later'
+                  : 'Submit Feedback'}
             </Button>
           </div>
         </form>
