@@ -97,13 +97,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const body = await request.json();
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: currentUser.id },
-      select: { role: true },
-    });
+    // Check if user is admin (guard currentUser may be undefined)
+    let isAdmin = false;
 
-    let isAdmin = user?.role === 'ADMIN';
+    if (currentUser?.id) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { role: true },
+      });
+      isAdmin = dbUser?.role === 'ADMIN';
+    }
+
     if (!isAdmin) {
       try {
         const adminToken = request.cookies.get('admin-token')?.value;
@@ -210,13 +214,17 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: currentUser.id },
-      select: { role: true },
-    });
+    // Check if user is admin (guard currentUser may be undefined)
+    let userIsAdmin = false;
 
-    let userIsAdmin = user?.role === 'ADMIN';
+    if (currentUser?.id) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { role: true },
+      });
+      userIsAdmin = dbUser?.role === 'ADMIN';
+    }
+
     if (!userIsAdmin) {
       try {
         const adminToken = request.cookies.get('admin-token')?.value;
