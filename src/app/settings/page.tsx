@@ -44,11 +44,27 @@ import {
   ExternalLink,
   Shield,
   Key,
+  ArrowLeft,
   ArrowLeftRight,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import { Reply } from 'lucide-react';
+
+interface UserFeedbackItem {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  status: string;
+  rating: number | null;
+  adminReply: string | null;
+  repliedAt: string | null;
+  createdAt: string;
+}
 
 interface UserProfile {
   id: string;
@@ -63,6 +79,7 @@ interface WorkspaceSettings {
   id: string;
   name: string;
   description: string | null;
+  memberLimit: number | null;
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -91,14 +108,23 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Delete account modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Workspace actions
   const [deletingWorkspace, setDeletingWorkspace] = useState<string | null>(null);
+  // User feedback submissions
+  const [myFeedback, setMyFeedback] = useState<UserFeedbackItem[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+
   const [leavingWorkspace, setLeavingWorkspace] = useState<string | null>(null);
   const [transferringWorkspace, setTransferringWorkspace] = useState<string | null>(null);
+  const [savingMemberLimit, setSavingMemberLimit] = useState<string | null>(null);
+  const [memberLimitInputs, setMemberLimitInputs] = useState<Record<string, string>>({});
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [transferWorkspaceId, setTransferWorkspaceId] = useState<string>('');
   const [newOwnerId, setNewOwnerId] = useState<string>('');
@@ -132,12 +158,35 @@ export default function SettingsPage() {
       if (workspacesRes.ok) {
         const workspacesData = await workspacesRes.json();
         setWorkspaces(workspacesData);
+        setMemberLimitInputs(
+          Object.fromEntries(
+            workspacesData.map((workspace: WorkspaceSettings) => [
+              workspace.id,
+              workspace.memberLimit?.toString() ?? '',
+            ])
+          )
+        );
       }
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('Failed to load settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMyFeedback = async () => {
+    try {
+      setFeedbackLoading(true);
+      const res = await fetch('/api/feedback?limit=20');
+      if (res.ok) {
+        const data = await res.json();
+        setMyFeedback(data.feedback ?? []);
+      }
+    } catch {
+      // silent
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -332,6 +381,54 @@ export default function SettingsPage() {
     return profile?.id === workspace.ownerId;
   };
 
+  const handleSaveMemberLimit = async (workspaceId: string) => {
+    const rawValue = memberLimitInputs[workspaceId] ?? '';
+    const trimmed = rawValue.trim();
+
+    if (trimmed !== '') {
+      const parsed = Number.parseInt(trimmed, 10);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        toast.error('Member limit must be a whole number greater than 0');
+        return;
+      }
+    }
+
+    setSavingMemberLimit(workspaceId);
+
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberLimit: trimmed === '' ? null : Number.parseInt(trimmed, 10),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update member limit');
+      }
+
+      setWorkspaces((prev) =>
+        prev.map((workspace) =>
+          workspace.id === workspaceId
+            ? { ...workspace, memberLimit: data.memberLimit ?? null }
+            : workspace
+        )
+      );
+      setMemberLimitInputs((prev) => ({
+        ...prev,
+        [workspaceId]: data.memberLimit?.toString() ?? '',
+      }));
+      toast.success('Member limit updated');
+    } catch (error) {
+      console.error('Error updating member limit:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update member limit');
+    } finally {
+      setSavingMemberLimit(null);
+    }
+  };
+
   if (loading) {
     return (
       <AuroraBackground showGrids showGlowOrbs>
@@ -351,15 +448,26 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
+          <div className="mb-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="gap-2 border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
           <div className="mb-4 flex items-center gap-4">
             <div className="relative">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 opacity-50 blur-xl" />
-              <div className="relative rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-3 shadow-2xl">
+              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 opacity-50 blur-xl" />
+              <div className="relative rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-3 shadow-2xl">
                 <Settings className="h-7 w-7 text-white" />
               </div>
             </div>
             <div>
-              <h1 className="bg-gradient-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">
+              <h1 className="bg-linear-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">
                 Settings
               </h1>
               <p className="mt-2 text-lg text-slate-400">
@@ -395,7 +503,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content (keep existing Tabs wrapper for content only) */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(tab) => {
+            setActiveTab(tab);
+            if (tab === 'feedback') loadMyFeedback();
+          }}
+          className="space-y-6"
+        >
           <AnimatePresence mode="wait">
             {/* Security Tab */}
             <TabsContent key="security" value="security" className="space-y-6">
@@ -408,12 +523,12 @@ export default function SettingsPage() {
               >
                 {/* Password Management Card */}
                 <div className="relative">
-                  <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
-                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+                  <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
+                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500 to-transparent" />
                     <div className="p-8">
                       <div className="mb-8 flex items-center gap-3">
-                        <div className="rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-2.5">
+                        <div className="rounded-xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-2.5">
                           <Key className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -437,15 +552,33 @@ export default function SettingsPage() {
                             <Label htmlFor="currentPassword" className="text-white">
                               Current Password
                             </Label>
-                            <Input
-                              id="currentPassword"
-                              type="password"
-                              value={currentPassword}
-                              onChange={(e) => setCurrentPassword(e.target.value)}
-                              placeholder="Enter current password"
-                              className="h-12 border-white/20 bg-white/5 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
-                              required
-                            />
+                            <div className="relative">
+                              <Input
+                                id="currentPassword"
+                                type={showCurrentPassword ? 'text' : 'password'}
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                placeholder="Enter current password"
+                                className="h-12 border-white/20 bg-white/5 pr-12 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
+                                required
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowCurrentPassword((prev) => !prev)}
+                                className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-white"
+                                aria-label={
+                                  showCurrentPassword
+                                    ? 'Hide current password'
+                                    : 'Show current password'
+                                }
+                              >
+                                {showCurrentPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         )}
 
@@ -453,15 +586,31 @@ export default function SettingsPage() {
                           <Label htmlFor="newPassword" className="text-white">
                             New Password
                           </Label>
-                          <Input
-                            id="newPassword"
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password"
-                            className="h-12 border-white/20 bg-white/5 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
-                            required
-                          />
+                          <div className="relative">
+                            <Input
+                              id="newPassword"
+                              type={showNewPassword ? 'text' : 'password'}
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="Enter new password"
+                              className="h-12 border-white/20 bg-white/5 pr-12 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword((prev) => !prev)}
+                              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-white"
+                              aria-label={
+                                showNewPassword ? 'Hide new password' : 'Show new password'
+                              }
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
 
                           {/* Password Strength Indicator */}
                           {newPassword && (
@@ -541,22 +690,40 @@ export default function SettingsPage() {
                           <Label htmlFor="confirmPassword" className="text-white">
                             Confirm New Password
                           </Label>
-                          <Input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                            className="h-12 border-white/20 bg-white/5 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
-                            required
-                          />
+                          <div className="relative">
+                            <Input
+                              id="confirmPassword"
+                              type={showConfirmPassword ? 'text' : 'password'}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="Confirm new password"
+                              className="h-12 border-white/20 bg-white/5 pr-12 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword((prev) => !prev)}
+                              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-white"
+                              aria-label={
+                                showConfirmPassword
+                                  ? 'Hide confirm password'
+                                  : 'Show confirm password'
+                              }
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         <div className="pt-2">
                           <Button
                             type="submit"
                             disabled={saving || passwordStrengthCount < 4}
-                            className="h-12 gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 px-8 font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 disabled:opacity-50"
+                            className="h-12 gap-2 bg-linear-to-r from-purple-600 to-fuchsia-600 px-8 font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 disabled:opacity-50"
                           >
                             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                             {hasPassword ? 'Change Password' : 'Set Password'}
@@ -568,10 +735,10 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Danger Zone Card */}
-                <div className="relative">
-                  <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-red-600/20 via-red-500/20 to-red-600/20 opacity-75 blur-2xl" />
-                  <div className="relative overflow-hidden rounded-3xl border-2 border-red-500/20 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+                <div className="relative mt-8">
+                  <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-red-600/20 via-red-500/20 to-red-600/20 opacity-75 blur-2xl" />
+                  <div className="relative overflow-hidden rounded-3xl border-2 border-red-500/20 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-red-500 to-transparent" />
                     <div className="p-8">
                       <div className="mb-6 flex items-center gap-3">
                         <div className="rounded-xl bg-red-500/10 p-2.5 ring-2 ring-red-500/20">
@@ -620,12 +787,12 @@ export default function SettingsPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="relative">
-                  <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 opacity-75 blur-2xl" />
-                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                  <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 opacity-75 blur-2xl" />
+                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-500 to-transparent" />
                     <div className="p-8">
                       <div className="mb-8 flex items-center gap-3">
-                        <div className="rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 p-2.5">
+                        <div className="rounded-xl bg-linear-to-br from-blue-600 to-cyan-600 p-2.5">
                           <Users className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -658,9 +825,9 @@ export default function SettingsPage() {
                                   initial={{ opacity: 0, y: 20 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: index * 0.1 }}
-                                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 transition-all hover:border-white/20 hover:shadow-xl"
+                                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/50 to-slate-900/50 p-6 transition-all hover:border-white/20 hover:shadow-xl"
                                 >
-                                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/0 via-purple-600/0 to-fuchsia-600/0 opacity-0 transition-opacity group-hover:opacity-5" />
+                                  <div className="absolute inset-0 bg-linear-to-br from-purple-600/0 via-purple-600/0 to-fuchsia-600/0 opacity-0 transition-opacity group-hover:opacity-5" />
 
                                   <div className="relative flex items-start justify-between gap-4">
                                     <div className="flex-1 space-y-3">
@@ -669,7 +836,7 @@ export default function SettingsPage() {
                                           {workspace.name}
                                         </h4>
                                         {isOwner ? (
-                                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/20 px-3 py-1 text-xs font-bold text-amber-300 ring-1 ring-amber-500/30">
+                                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-linear-to-br from-amber-500/20 to-yellow-500/20 px-3 py-1 text-xs font-bold text-amber-300 ring-1 ring-amber-500/30">
                                             <Crown className="h-3.5 w-3.5" />
                                             Owner
                                           </span>
@@ -712,7 +879,56 @@ export default function SettingsPage() {
                                             })}
                                           </span>
                                         </div>
+                                        <div className="flex items-center gap-1.5">
+                                          <Shield className="h-3.5 w-3.5" />
+                                          <span>
+                                            Limit:{' '}
+                                            {workspace.memberLimit === null
+                                              ? 'Unlimited'
+                                              : `${workspace.memberLimit} members`}
+                                          </span>
+                                        </div>
                                       </div>
+
+                                      {isOwner && (
+                                        <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                                          <div className="mb-2 text-xs font-medium text-slate-300">
+                                            Member limit
+                                          </div>
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <Input
+                                              type="number"
+                                              min={1}
+                                              step={1}
+                                              value={memberLimitInputs[workspace.id] ?? ''}
+                                              onChange={(e) =>
+                                                setMemberLimitInputs((prev) => ({
+                                                  ...prev,
+                                                  [workspace.id]: e.target.value,
+                                                }))
+                                              }
+                                              placeholder="Unlimited"
+                                              className="h-9 w-44 border-white/20 bg-white/5 text-sm text-white placeholder:text-slate-500"
+                                            />
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleSaveMemberLimit(workspace.id)}
+                                              disabled={savingMemberLimit === workspace.id}
+                                              className="border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+                                            >
+                                              {savingMemberLimit === workspace.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : (
+                                                'Save Limit'
+                                              )}
+                                            </Button>
+                                            <span className="text-xs text-slate-500">
+                                              Leave empty to allow unlimited members.
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
                                     <div className="flex shrink-0 items-center gap-2">
@@ -805,12 +1021,12 @@ export default function SettingsPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="relative">
-                  <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
-                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+                  <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
+                  <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500 to-transparent" />
                     <div className="p-8">
                       <div className="mb-8 flex items-center gap-3">
-                        <div className="rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-2.5">
+                        <div className="rounded-xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-2.5">
                           <MessageSquare className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -824,8 +1040,8 @@ export default function SettingsPage() {
 
                       <div className="space-y-6">
                         {/* CTA Card */}
-                        <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-fuchsia-500/10 p-8">
-                          <div className="absolute top-0 right-0 h-32 w-32 bg-gradient-to-br from-purple-600/20 to-fuchsia-600/20 blur-3xl" />
+                        <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-purple-500/30 bg-linear-to-br from-purple-500/10 to-fuchsia-500/10 p-8">
+                          <div className="absolute top-0 right-0 h-32 w-32 bg-linear-to-br from-purple-600/20 to-fuchsia-600/20 blur-3xl" />
                           <div className="relative mx-auto max-w-2xl text-center">
                             <MessageSquare className="mx-auto mb-4 h-14 w-14 text-purple-400" />
                             <h4 className="mb-3 text-2xl font-bold text-white">
@@ -839,7 +1055,7 @@ export default function SettingsPage() {
                               trigger={
                                 <Button
                                   size="lg"
-                                  className="gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 px-8 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                                  className="gap-2 bg-linear-to-r from-purple-600 to-fuchsia-600 px-8 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
                                 >
                                   <MessageSquare className="h-5 w-5" />
                                   Send Feedback
@@ -927,6 +1143,90 @@ export default function SettingsPage() {
                             <li>• Critical bugs are addressed immediately</li>
                             <li>• Feature requests influence our roadmap</li>
                           </ul>
+
+                          {/* My Submissions */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="flex items-center gap-2 font-semibold text-white">
+                                <Reply className="h-4 w-4 text-purple-400" />
+                                My Submissions
+                              </h4>
+                              <button
+                                onClick={loadMyFeedback}
+                                disabled={feedbackLoading}
+                                className="text-xs text-slate-500 transition-colors hover:text-slate-300 disabled:opacity-40"
+                              >
+                                {feedbackLoading ? 'Loading…' : 'Refresh'}
+                              </button>
+                            </div>
+
+                            {myFeedback.length === 0 && !feedbackLoading ? (
+                              <div className="rounded-2xl border border-white/8 bg-white/3 py-8 text-center">
+                                <MessageSquare className="mx-auto mb-2 h-8 w-8 text-slate-700" />
+                                <p className="text-sm text-slate-500">No submissions yet</p>
+                                <p className="mt-1 text-xs text-slate-600">
+                                  Use the button above to send your first feedback
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {myFeedback.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="space-y-3 rounded-2xl border border-white/8 bg-white/3 p-4"
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-white">
+                                          {item.title}
+                                        </p>
+                                        <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+                                          {item.description}
+                                        </p>
+                                      </div>
+                                      <div className="flex shrink-0 flex-col items-end gap-1">
+                                        <span
+                                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                            item.status === 'NEW'
+                                              ? 'border-blue-500/30 bg-blue-500/15 text-blue-400'
+                                              : item.status === 'RESOLVED'
+                                                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
+                                                : item.status === 'REJECTED'
+                                                  ? 'border-red-500/30 bg-red-500/15 text-red-400'
+                                                  : 'border-purple-500/30 bg-purple-500/15 text-purple-400'
+                                          }`}
+                                        >
+                                          {item.status}
+                                        </span>
+                                        <span className="text-[10px] text-slate-600">
+                                          {formatDistanceToNow(new Date(item.createdAt))} ago
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {item.adminReply && (
+                                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-3">
+                                        <div className="mb-1.5 flex items-center gap-1.5">
+                                          <Reply className="h-3 w-3 text-emerald-400" />
+                                          <span className="text-[10px] font-semibold tracking-wide text-emerald-400 uppercase">
+                                            Team Reply
+                                          </span>
+                                          {item.repliedAt && (
+                                            <span className="ml-auto text-[10px] text-slate-600">
+                                              {formatDistanceToNow(new Date(item.repliedAt))} ago
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-sm whitespace-pre-wrap text-slate-200">
+                                          {item.adminReply}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -939,7 +1239,7 @@ export default function SettingsPage() {
 
         {/* Transfer Ownership Dialog */}
         <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
-          <DialogContent className="border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <DialogContent className="border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-white">
                 <ArrowLeftRight className="h-5 w-5 text-purple-400" />
@@ -1008,7 +1308,7 @@ export default function SettingsPage() {
               <Button
                 onClick={handleTransferOwnership}
                 disabled={!newOwnerId || transferringWorkspace === transferWorkspaceId}
-                className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+                className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
               >
                 {transferringWorkspace === transferWorkspaceId ? (
                   <>

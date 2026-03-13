@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { WorkspaceNavbar } from '@/components/workspace/workspace-navbar';
 import { CreateDocumentDialog } from '@/components/create-document-dialog';
-import { WorkspaceSettingsDialog } from '@/components/workspace-settings-dialog';
 import { WorkspaceActions } from '@/components/WorkspaceActions';
 import { DocumentList } from '@/components/document-list';
 import { WorkspaceMembersPanel } from '@/components/workspace-members-panel';
 import { WorkspaceGitHubSyncDialog } from '@/components/WorkspaceGitHubSyncDialog';
+import { WorkspaceFavoriteToggleButton } from '@/components/WorkspaceFavoriteToggleButton';
 import {
   ALL_WORKSPACE_PERMISSIONS,
   WORKSPACE_PERMISSION,
@@ -62,6 +62,14 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
           },
         },
       },
+      workspaceFavorites: {
+        where: {
+          userId: session.user.id,
+        },
+        select: {
+          id: true,
+        },
+      },
       documents: {
         include: {
           author: {
@@ -76,6 +84,14 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
               syncStatus: true,
               lastSyncedAt: true,
               autoSync: true,
+            },
+          },
+          favorites: {
+            where: {
+              userId: session.user.id,
+            },
+            select: {
+              id: true,
             },
           },
           _count: {
@@ -118,14 +134,24 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
           workspaceDescription={workspace.description}
           userName={session.user.name}
           userEmail={session.user.email || undefined}
+          userImage={session.user.image}
         >
-          <WorkspaceActions
-            workspaceId={workspace.id}
-            workspaceName={workspace.name}
-            workspaceDescription={workspace.description || ''}
-            isOwner={isOwner}
-            canManage={canEditWorkspace}
-          />
+          <>
+            <WorkspaceFavoriteToggleButton
+              workspaceId={workspace.id}
+              initialIsFavorite={Boolean(workspace.workspaceFavorites.length)}
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 p-0 text-slate-200 hover:bg-white/10 hover:text-white"
+            />
+            <WorkspaceActions
+              workspaceId={workspace.id}
+              workspaceName={workspace.name}
+              workspaceDescription={workspace.description || ''}
+              isOwner={isOwner}
+              canManage={canEditWorkspace}
+            />
+          </>
         </WorkspaceNavbar>
 
         {/* Main Content */}

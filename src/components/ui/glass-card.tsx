@@ -23,7 +23,7 @@ export function GlassCard({ children, className, hover = true, glow = false }: G
       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
     >
       {glow && (
-        <div className="pointer-events-none absolute -inset-px rounded-lg bg-gradient-to-br from-purple-600/10 via-transparent to-fuchsia-600/10 opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="pointer-events-none absolute -inset-px rounded-lg bg-linear-to-br from-purple-600/10 via-transparent to-fuchsia-600/10 opacity-0 transition-opacity group-hover:opacity-100" />
       )}
       <div className="relative z-10">{children}</div>
     </motion.div>

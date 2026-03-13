@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/session';
 
 import { NotificationService } from '@/lib/notifications';
 
 // POST /api/notifications/read-all
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const user = await getCurrentUser();
     if (!user) {

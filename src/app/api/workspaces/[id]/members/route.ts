@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
-import { WORKSPACE_PERMISSION, normalizePermissions } from '@/lib/workspace-permission-definitions';
+import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import {
   assertDelegatablePermissions,
   assertPermission,
@@ -124,6 +125,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
     }
 
+    if (workspace.memberLimit !== null) {
+      const currentMembers = await prisma.workspaceMember.count({
+        where: { workspaceId: id },
+      });
+      if (currentMembers >= workspace.memberLimit) {
+        return NextResponse.json(
+          { error: `Workspace member limit (${workspace.memberLimit}) has been reached` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Find target user (optional for email invites)
     const targetUser = await prisma.user.findUnique({
       where: email ? { email } : { id: userId },
@@ -185,21 +198,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       });
 
-      await tx.activity.create({
-        data: {
-          type: 'INVITE_SENT',
-          actorId: user.id,
-          workspaceId: id,
-          entityType: 'workspace_invite',
-          entityId: newInvite.id,
-          metadata: {
-            invitedEmail: newInvite.invitedEmail,
-            invitedUserId: newInvite.invitedUserId,
-            grantedById: user.id,
-            grantRootId,
-            message,
-            permissions: normalizedPermissions,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'INVITE_SENT',
+        actorId: user.id,
+        workspaceId: id,
+        entityType: 'workspace_invite',
+        entityId: newInvite.id,
+        metadata: {
+          invitedEmail: newInvite.invitedEmail,
+          invitedUserId: newInvite.invitedUserId,
+          invitedUserName: targetUser?.name,
+          grantedById: user.id,
+          grantRootId,
+          message,
+          permissions: normalizedPermissions,
         },
       });
 

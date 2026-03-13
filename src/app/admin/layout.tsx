@@ -3,8 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Shield, Users, BarChart3, LogOut, Menu, X, MessageSquare } from 'lucide-react';
+import { Shield, Users, BarChart3, LogOut, Menu, X, MessageSquare, ArrowLeft } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -24,7 +23,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
-  // Skip authentication check for login page
   const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
@@ -59,17 +57,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     router.push('/admin/login');
   };
 
-  // Render login page without layout
   if (isLoginPage) {
     return <>{children}</>;
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#111827_0%,#1f2937_42%,#0f172a_100%)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-muted-foreground">Verifying admin access...</p>
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-purple-500" />
+            <div className="absolute inset-2 flex items-center justify-center rounded-full bg-linear-to-br from-purple-600 to-fuchsia-600">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+          </div>
+          <p className="text-sm tracking-wide text-slate-400">Verifying admin access…</p>
         </div>
       </div>
     );
@@ -86,50 +88,72 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#111827_0%,#1f2937_42%,#0f172a_100%)] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-28 h-112 w-md rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="absolute top-12 -right-32 h-120 w-120 rounded-full bg-fuchsia-500/10 blur-[140px]" />
+        <div className="absolute -bottom-32 left-1/3 h-104 w-104 rounded-full bg-violet-600/8 blur-[140px]" />
+        <div className="absolute top-1/2 right-1/4 h-88 w-88 rounded-full bg-indigo-600/6 blur-[100px]" />
+        <div className="absolute -right-16 -bottom-20 h-80 w-80 rounded-full bg-fuchsia-600/7 blur-[130px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-size-[52px_52px] opacity-[0.04]" />
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.018)_0px,rgba(255,255,255,0.018)_1px,transparent_1px,transparent_64px)]" />
+        <div className="absolute -top-32 -right-32 h-160 w-160 rounded-full border border-violet-500/8" />
+        <div className="absolute -bottom-48 -left-24 h-192 w-3xl rounded-full border border-indigo-500/6" />
+      </div>
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-gray-200 bg-white transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-slate-900/72 backdrop-blur-2xl transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {/* Subtle top border accent */}
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500/50 to-transparent" />
+
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-700">
+          <div className="flex items-center justify-between border-b border-white/10 p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-purple-600">
-                <Shield className="h-6 w-6 text-white" />
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
+                <Shield className="h-5 w-5 text-white" />
+                <div className="absolute inset-0 rounded-xl ring-1 ring-white/20 ring-inset" />
               </div>
               <div>
-                <h1 className="text-lg font-bold">Admin Panel</h1>
-                <p className="text-muted-foreground text-xs">Control Center</p>
+                <h1 className="text-sm font-bold text-white">Admin Panel</h1>
+                <p className="text-[10px] font-medium tracking-widest text-slate-500 uppercase">
+                  Control Center
+                </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden"
+              aria-label="Close navigation"
+              title="Close navigation"
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-white/5 hover:text-white lg:hidden"
             >
-              <X className="h-5 w-5" />
-            </Button>
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-2 overflow-y-auto p-4">
+          <nav className="flex-1 space-y-1 overflow-y-auto p-3">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
+                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
                     isActive
-                      ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                      ? 'bg-linear-to-r from-indigo-500/15 via-violet-500/20 to-fuchsia-500/15 font-semibold text-white shadow-sm'
+                      : 'font-medium text-slate-400 hover:bg-white/6 hover:text-white'
                   }`}
                 >
-                  <item.icon className="h-5 w-5" />
+                  {isActive && (
+                    <span className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-linear-to-b from-indigo-400 via-violet-400 to-fuchsia-400" />
+                  )}
+                  <item.icon
+                    className={`h-4 w-4 ${isActive ? 'text-violet-400' : 'text-slate-500 group-hover:text-slate-300'}`}
+                  />
                   {item.name}
                 </Link>
               );
@@ -137,17 +161,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* User info & logout */}
-          <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+          <div className="space-y-3 border-t border-white/8 p-4">
             {adminUser && (
-              <div className="mb-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                <p className="truncate text-sm font-medium">{adminUser.email}</p>
-                <p className="text-muted-foreground text-xs">Administrator</p>
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2.5 shadow-lg shadow-black/10">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-purple-600 to-fuchsia-600 text-xs font-bold text-white">
+                  {adminUser.email[0].toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-white">{adminUser.email}</p>
+                  <p className="text-[10px] text-slate-500">Administrator</p>
+                </div>
               </div>
             )}
-            <Button variant="outline" className="w-full" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/8 px-3 py-2 text-sm font-medium text-red-400 transition-all hover:border-red-500/40 hover:bg-red-500/15 hover:text-red-300"
+            >
+              <LogOut className="h-4 w-4" />
               Sign Out
-            </Button>
+            </button>
           </div>
         </div>
       </aside>
@@ -155,31 +187,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:pl-64' : 'pl-0'}`}>
         {/* Top bar */}
-        <header className="sticky top-0 z-40 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center justify-between px-6 py-4">
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-900/55 backdrop-blur-2xl">
+          <div className="flex items-center justify-between px-6 py-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Toggle navigation"
+              title="Toggle navigation"
+              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+            >
               <Menu className="h-5 w-5" />
-            </Button>
-
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-              >
-                ← Back to App
-              </Link>
-            </div>
+            </button>
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-400 transition-all hover:border-white/20 hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to App
+            </Link>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="p-6">{children}</main>
+        <main className="relative p-6 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 
 // POST reject workspace invitation
@@ -57,18 +58,16 @@ export async function POST(
       });
 
       // Log the activity
-      await tx.activity.create({
-        data: {
-          type: 'INVITE_REJECTED',
-          actorId: user.id,
-          workspaceId: invite.workspaceId,
-          entityType: 'workspace_invite',
-          entityId: inviteId,
-          metadata: {
-            userName: user.name,
-            userEmail: user.email,
-            invitedById: invite.invitedById,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'INVITE_REJECTED',
+        actorId: user.id,
+        workspaceId: invite.workspaceId,
+        entityType: 'workspace_invite',
+        entityId: inviteId,
+        metadata: {
+          userName: user.name,
+          userEmail: user.email,
+          invitedById: invite.invitedById,
         },
       });
 

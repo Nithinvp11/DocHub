@@ -36,7 +36,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('signin');
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="relative min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* REDESIGNED Premium Animated Background */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {/* Deep gradient mesh - more vibrant */}
@@ -44,7 +44,7 @@ export default function AuthPage() {
 
         {/* Animated gradient orbs - more pronounced */}
         <motion.div
-          className="absolute -top-20 -left-20 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-purple-600/30 via-violet-600/20 to-transparent blur-[100px]"
+          className="absolute -top-20 -left-20 h-[500px] w-[500px] rounded-full bg-linear-to-br from-purple-600/30 via-violet-600/20 to-transparent blur-[100px]"
           animate={{
             scale: [1, 1.2, 1],
             x: [0, 50, 0],
@@ -57,7 +57,7 @@ export default function AuthPage() {
           }}
         />
         <motion.div
-          className="absolute -right-20 -bottom-20 h-[600px] w-[600px] rounded-full bg-gradient-to-tl from-fuchsia-600/25 via-pink-600/15 to-transparent blur-[120px]"
+          className="absolute -right-20 -bottom-20 h-[600px] w-[600px] rounded-full bg-linear-to-tl from-fuchsia-600/25 via-pink-600/15 to-transparent blur-[120px]"
           animate={{
             scale: [1.1, 1, 1.1],
             x: [0, -40, 0],
@@ -70,7 +70,7 @@ export default function AuthPage() {
           }}
         />
         <motion.div
-          className="absolute top-1/2 left-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-600/20 to-cyan-600/15 blur-[90px]"
+          className="absolute top-1/2 left-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-r from-blue-600/20 to-cyan-600/15 blur-[90px]"
           animate={{
             scale: [1, 1.15, 1],
             rotate: [0, 90, 0],
@@ -134,7 +134,7 @@ export default function AuthPage() {
         {/* Floating reflective glass elements */}
         <>
           <motion.div
-            className="absolute top-[15%] right-[12%] h-32 w-32 rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent shadow-2xl shadow-purple-500/10 backdrop-blur-md"
+            className="absolute top-[15%] right-[12%] h-32 w-32 rounded-2xl border border-purple-400/20 bg-linear-to-br from-purple-500/10 via-transparent to-transparent shadow-2xl shadow-purple-500/10 backdrop-blur-md"
             animate={{
               y: [0, -30, 0],
               rotate: [0, 10, 0],
@@ -146,7 +146,7 @@ export default function AuthPage() {
             }}
           />
           <motion.div
-            className="absolute bottom-[25%] left-[8%] h-28 w-28 rounded-xl border border-fuchsia-400/20 bg-gradient-to-tr from-fuchsia-500/10 via-transparent to-transparent shadow-xl shadow-fuchsia-500/10 backdrop-blur-lg"
+            className="absolute bottom-[25%] left-[8%] h-28 w-28 rounded-xl border border-fuchsia-400/20 bg-linear-to-tr from-fuchsia-500/10 via-transparent to-transparent shadow-xl shadow-fuchsia-500/10 backdrop-blur-lg"
             animate={{
               y: [0, 40, 0],
               rotate: [0, -15, 0],
@@ -159,7 +159,7 @@ export default function AuthPage() {
             }}
           />
           <motion.div
-            className="absolute top-[45%] left-[7%] h-20 w-20 rounded-lg border border-blue-400/20 bg-gradient-to-bl from-blue-500/10 via-transparent to-transparent shadow-xl shadow-blue-500/10 backdrop-blur-md"
+            className="absolute top-[45%] left-[7%] h-20 w-20 rounded-lg border border-blue-400/20 bg-linear-to-bl from-blue-500/10 via-transparent to-transparent shadow-xl shadow-blue-500/10 backdrop-blur-md"
             animate={{
               y: [0, -50, 0],
               rotate: [0, 20, 0],
@@ -201,7 +201,7 @@ export default function AuthPage() {
                   <div className="relative">
                     {/* Animated glow halo */}
                     <motion.div
-                      className="absolute -inset-4 rounded-[2rem] bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 opacity-30 blur-2xl"
+                      className="absolute -inset-4 rounded-[2rem] bg-linear-to-r from-purple-500 via-fuchsia-500 to-pink-500 opacity-30 blur-2xl"
                       animate={{
                         opacity: [0.3, 0.6, 0.3],
                         scale: [1, 1.1, 1],
@@ -212,7 +212,7 @@ export default function AuthPage() {
                         ease: 'easeInOut',
                       }}
                     />
-                    <div className="relative rounded-3xl bg-gradient-to-br from-purple-500 via-violet-600 to-fuchsia-600 p-5 shadow-2xl shadow-purple-500/50">
+                    <div className="relative rounded-3xl bg-linear-to-br from-purple-500 via-violet-600 to-fuchsia-600 p-5 shadow-2xl shadow-purple-500/50">
                       <FileText className="h-14 w-14 text-white drop-shadow-lg" />
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function AuthPage() {
                 <div className="space-y-4">
                   <h1 className="text-6xl leading-tight font-bold tracking-tight">
                     <motion.span
-                      className="block bg-gradient-to-r from-white via-purple-100 to-white bg-clip-text text-transparent"
+                      className="block bg-linear-to-r from-white via-purple-100 to-white bg-clip-text text-transparent"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
@@ -271,7 +271,7 @@ export default function AuthPage() {
                       whileHover={{ x: 8 }}
                     >
                       <div
-                        className={`rounded-xl bg-gradient-to-br ${feature.color} border border-white/10 p-3 shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110`}
+                        className={`rounded-xl bg-linear-to-br ${feature.color} border border-white/10 p-3 shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110`}
                       >
                         <feature.icon className="h-6 w-6 text-white drop-shadow-lg" />
                       </div>
@@ -284,13 +284,13 @@ export default function AuthPage() {
 
                 {/* Decorative accent line with shimmer */}
                 <motion.div
-                  className="relative mt-10 h-1.5 w-40 overflow-hidden rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 shadow-lg shadow-purple-500/50"
+                  className="relative mt-10 h-1.5 w-40 overflow-hidden rounded-full bg-linear-to-r from-purple-500 via-fuchsia-500 to-pink-500 shadow-lg shadow-purple-500/50"
                   initial={{ scaleX: 0, opacity: 0 }}
                   animate={{ scaleX: 1, opacity: 1 }}
                   transition={{ delay: 1, duration: 0.8, ease: 'easeOut' }}
                 >
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"
+                    className="absolute inset-0 bg-linear-to-r from-transparent via-white to-transparent"
                     animate={{
                       x: ['-100%', '200%'],
                     }}
@@ -315,13 +315,13 @@ export default function AuthPage() {
               {/* Mobile Logo */}
               <div className="mb-8 flex flex-col items-center lg:hidden">
                 <motion.div
-                  className="mb-4 rounded-2xl bg-gradient-to-br from-purple-500 via-violet-600 to-fuchsia-600 p-3 shadow-xl shadow-purple-500/40"
+                  className="mb-4 rounded-2xl bg-linear-to-br from-purple-500 via-violet-600 to-fuchsia-600 p-3 shadow-xl shadow-purple-500/40"
                   whileHover={{ scale: 1.1, rotate: 360 }}
                   transition={{ type: 'spring', stiffness: 200 }}
                 >
                   <FileText className="h-8 w-8 text-white" />
                 </motion.div>
-                <h1 className="bg-gradient-to-r from-purple-300 via-fuchsia-300 to-pink-300 bg-clip-text text-2xl font-bold text-transparent">
+                <h1 className="bg-linear-to-r from-purple-300 via-fuchsia-300 to-pink-300 bg-clip-text text-2xl font-bold text-transparent">
                   DocHub
                 </h1>
               </div>
@@ -333,10 +333,10 @@ export default function AuthPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <div className="relative flex rounded-2xl border border-purple-500/20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 p-1.5 shadow-xl shadow-purple-500/10 backdrop-blur-xl">
+                <div className="relative flex rounded-2xl border border-purple-500/20 bg-linear-to-r from-white/5 via-white/10 to-white/5 p-1.5 shadow-xl shadow-purple-500/10 backdrop-blur-xl">
                   {/* Animated sliding indicator */}
                   <motion.div
-                    className="absolute inset-y-1.5 rounded-xl bg-gradient-to-r from-purple-500 via-violet-600 to-fuchsia-600 shadow-2xl shadow-purple-500/60"
+                    className="absolute inset-y-1.5 rounded-xl bg-linear-to-r from-purple-500 via-violet-600 to-fuchsia-600 shadow-2xl shadow-purple-500/60"
                     initial={false}
                     animate={{
                       left: mode === 'signin' ? '6px' : 'calc(50% + 2px)',
@@ -352,7 +352,7 @@ export default function AuthPage() {
                     }}
                   >
                     {/* Inner glow */}
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-white/20 to-transparent" />
+                    <div className="absolute inset-0 rounded-xl bg-linear-to-t from-white/20 to-transparent" />
                   </motion.div>
 
                   <button
@@ -417,7 +417,7 @@ export default function AuthPage() {
                       duration: 0.35,
                       ease: [0.4, 0, 0.2, 1],
                     }}
-                    className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-white/10 via-white/5 to-white/5 p-10 shadow-2xl shadow-purple-500/10 backdrop-blur-2xl"
+                    className="rounded-3xl border border-purple-500/20 bg-linear-to-br from-white/10 via-white/5 to-white/5 p-10 shadow-2xl shadow-purple-500/10 backdrop-blur-2xl"
                   >
                     {mode === 'signin' ? (
                       <SignInForm onSwitchToSignUp={() => setMode('signup')} />

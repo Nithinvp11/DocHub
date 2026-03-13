@@ -1,12 +1,9 @@
 <mxfile host="65bd71144e">
     <diagram id="er-diagram" name="ER Diagram">
-        <mxGraphModel dx="708" dy="563" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="1800" math="0" shadow="0">
+        <mxGraphModel dx="960" dy="2489" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="1800" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Repo-Aware Knowledge Hub - Entity Relationship Diagram" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#000000;" parent="1" vertex="1">
-                    <mxGeometry x="800" y="30" width="900" height="50" as="geometry"/>
-                </mxCell>
                 <mxCell id="user-entity" value="USER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontSize=16;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="300" width="160" height="80" as="geometry"/>
                 </mxCell>
@@ -119,7 +116,7 @@
                 <mxCell id="ver-num-conn" value="" style="endArrow=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="ver-num" target="version-entity" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="ver-createdat-conn" value="" style="endArrow=none;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="ver-createdat" target="version-entity">
+                <mxCell id="ver-createdat-conn" value="" style="endArrow=none;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" parent="1" source="ver-createdat" target="version-entity" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="ver-docid-conn" value="" style="endArrow=none;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="21" target="version-entity" edge="1">
@@ -213,40 +210,59 @@
                 <mxCell id="authors-doc-conn" value="N" style="endArrow=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;curved=1;fontSize=14;fontStyle=1;" parent="1" source="authors-rel" target="doc-entity" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-box" value="LEGEND" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#000000;strokeWidth=2;fontSize=16;fontStyle=1;align=left;verticalAlign=top;" parent="1" vertex="1">
-                    <mxGeometry x="2050" y="300" width="380" height="450" as="geometry"/>
-                </mxCell>
-                <mxCell id="legend-entity" value="Entity (Rectangle)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="2100" y="360" width="160" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="legend-rel" value="Relationship&#xa;(Diamond)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontSize=13;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="2130" y="450" width="120" height="100" as="geometry"/>
-                </mxCell>
-                <mxCell id="legend-attr" value="Attribute&#xa;(Oval)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=13;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="2130" y="580" width="120" height="70" as="geometry"/>
-                </mxCell>
-                <mxCell id="legend-pk" value="Primary Key&#xa;(Underlined)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=13;fontStyle=4;" parent="1" vertex="1">
-                    <mxGeometry x="2310" y="360" width="100" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="legend-text" value="Cardinality:&#xa;1 = One&#xa;N = Many&#xa;M = Many&#xa;&#xa;Example:&#xa;1:N = One-to-Many&#xa;N:M = Many-to-Many" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="2100" y="670" width="280" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="17" value="Description" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                <mxCell id="17" value="Description" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="640" y="495" width="100" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="20" value="Content" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                <mxCell id="20" value="Content" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1400" y="280" width="100" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="21" value="Message" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                <mxCell id="21" value="Message" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1060" y="550" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="22" value="CreatedAt" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                <mxCell id="22" value="CreatedAt" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1380" y="400" width="100" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="" style="endArrow=none;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="22" target="doc-entity">
+                <mxCell id="23" value="" style="endArrow=none;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" parent="1" source="22" target="doc-entity" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
                         <mxPoint x="1410" y="320" as="sourcePoint"/>
                         <mxPoint x="1370" y="340" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="feedback-entity" value="FEEDBACK" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="90" width="170" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-id" value="feedback Id (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontStyle=4;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="-10" width="110" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-type" value="type" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="830" width="100" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-title" value="Content" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="110" width="100" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-id-conn" value="" style="endArrow=none;html=1;exitX=0.9;exitY=1;exitDx=0;exitDy=0;entryX=0.1;entryY=0;entryDx=0;entryDy=0;" parent="1" source="feedback-id" target="feedback-entity" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-type-conn" value="" style="endArrow=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.6;entryY=0;entryDx=0;entryDy=0;" parent="1" source="feedback-type" target="feedback-entity" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="feedback-title-conn" value="" style="endArrow=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="feedback-title" target="feedback-entity" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="submits-rel" value="SUBMITS" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="445" y="80" width="150" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="user-submits-conn" value="1" style="endArrow=none;html=1;fontSize=14;fontStyle=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;" parent="1" source="user-entity" target="submits-rel" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="460" y="340" as="sourcePoint"/>
+                        <mxPoint x="1080" y="590" as="targetPoint"/>
+                        <Array as="points"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="submits-feedback-conn" value="N" style="endArrow=none;html=1;fontSize=14;fontStyle=1;" parent="1" source="submits-rel" target="feedback-entity" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1230" y="590" as="sourcePoint"/>
+                        <mxPoint x="1560" y="600" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
             </root>

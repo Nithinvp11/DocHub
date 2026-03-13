@@ -1,9 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -26,6 +23,8 @@ import {
   Clock,
   Filter,
   RefreshCw,
+  Trash2,
+  Reply,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -41,7 +40,8 @@ interface Feedback {
   priority: string;
   url: string | null;
   userAgent: string | null;
-  adminNotes: string | null;
+  adminReply: string | null;
+  repliedAt: string | null;
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
@@ -75,7 +75,7 @@ export default function AdminFeedbackPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [adminReply, setAdminReply] = useState('');
   const [updating, setUpdating] = useState(false);
 
   // Filters
@@ -165,6 +165,31 @@ export default function AdminFeedbackPage() {
     }
   };
 
+  const deleteFeedback = async (id: string) => {
+    const confirmed = window.confirm('Delete this feedback item? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      setUpdating(true);
+      const response = await fetch(`/api/feedback/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete feedback');
+      }
+
+      toast.success('Feedback deleted successfully');
+      setSelectedFeedback(null);
+      await Promise.all([loadFeedback(), loadStats()]);
+    } catch (error) {
+      console.error('Failed to delete feedback:', error);
+      toast.error('Failed to delete feedback');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'BUG':
@@ -183,297 +208,302 @@ export default function AdminFeedbackPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'NEW':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        return 'border border-blue-500/30 bg-blue-500/15 text-blue-400';
       case 'REVIEWING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'border border-orange-500/30 bg-orange-500/15 text-orange-400';
       case 'IN_PROGRESS':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+        return 'border border-purple-500/30 bg-purple-500/15 text-purple-400';
       case 'RESOLVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-400';
       case 'CLOSED':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        return 'border border-slate-600/40 bg-slate-700/30 text-slate-400';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        return 'border border-red-500/30 bg-red-500/15 text-red-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'border border-slate-600/40 bg-slate-700/30 text-slate-400';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'CRITICAL':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        return 'border border-red-500/30 bg-red-500/15 text-red-400';
       case 'HIGH':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+        return 'border border-orange-500/30 bg-orange-500/15 text-orange-400';
       case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'border border-orange-500/30 bg-orange-500/15 text-orange-400';
       case 'LOW':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        return 'border border-slate-600/30 bg-slate-700/20 text-slate-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'border border-slate-600/30 bg-slate-700/20 text-slate-400';
     }
   };
 
   return (
-    <div className="container mx-auto space-y-6 py-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">User Feedback</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold text-white">User Feedback</h1>
+          <p className="mt-1 text-sm text-slate-300">
             Manage and respond to user feedback, bug reports, and feature requests
           </p>
         </div>
-        <Button
+        <button
           onClick={() => {
             loadFeedback();
             loadStats();
           }}
-          variant="outline"
-          size="sm"
+          className="flex items-center gap-2 rounded-xl border border-white/12 bg-white/8 px-3.5 py-2 text-sm font-medium text-slate-200 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
           Refresh
-        </Button>
+        </button>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
-              <MessageSquare className="text-muted-foreground h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-muted-foreground text-xs">{stats.recentCount} in last 7 days</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">New Feedback</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.new}</div>
-              <p className="text-muted-foreground text-xs">Awaiting review</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.resolved}</div>
-              <p className="text-muted-foreground text-xs">
-                {stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}% resolution
-                rate
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-              <Star className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.averageRating ? stats.averageRating.toFixed(1) : 'N/A'}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: 'Total Feedback',
+              value: stats.total,
+              sub: `${stats.recentCount} in last 7 days`,
+              icon: MessageSquare,
+              accent: 'from-violet-600 to-purple-600',
+              glow: 'shadow-purple-500/20',
+            },
+            {
+              label: 'New Feedback',
+              value: stats.new,
+              sub: 'Awaiting review',
+              icon: Clock,
+              accent: 'from-blue-600 to-sky-600',
+              glow: 'shadow-blue-500/20',
+            },
+            {
+              label: 'Resolved',
+              value: stats.resolved,
+              sub: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}% resolution rate`,
+              icon: CheckCircle2,
+              accent: 'from-emerald-600 to-teal-600',
+              glow: 'shadow-emerald-500/20',
+            },
+            {
+              label: 'Avg Rating',
+              value: stats.averageRating ? stats.averageRating.toFixed(1) : 'N/A',
+              sub: null,
+              icon: Star,
+              accent: 'from-violet-500 to-fuchsia-500',
+              glow: 'shadow-violet-500/20',
+              stars: true,
+            },
+          ].map((card) => (
+            <div
+              key={card.label}
+              className={`relative overflow-hidden rounded-3xl border border-white/12 bg-slate-900/52 p-5 shadow-xl ${card.glow} backdrop-blur-2xl`}
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent" />
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                  {card.label}
+                </p>
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br ${card.accent} shadow-lg`}
+                >
+                  <card.icon className="h-4 w-4 text-white" />
+                </div>
               </div>
-              <div className="mt-1 flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`h-3 w-3 ${
-                      star <= Math.round(stats.averageRating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              <p className="mt-3 text-3xl font-bold text-white">{String(card.value)}</p>
+              {card.stars ? (
+                <div className="mt-1 flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      className={`h-3 w-3 ${s <= Math.round(stats.averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-slate-700'}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">{card.sub}</p>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
+      <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-slate-900/52 p-5 backdrop-blur-2xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+        <div className="mb-4 flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-400" />
+          <h2 className="text-sm font-semibold text-white">Filters</h2>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              label: 'Type',
+              value: typeFilter,
+              setter: setTypeFilter,
+              options: [
+                ['all', 'All Types'],
+                ['BUG', 'Bug Report'],
+                ['FEATURE', 'Feature Request'],
+                ['IMPROVEMENT', 'Improvement'],
+                ['QUESTION', 'Question'],
+                ['GENERAL', 'General'],
+              ],
+            },
+            {
+              label: 'Status',
+              value: statusFilter,
+              setter: setStatusFilter,
+              options: [
+                ['all', 'All Status'],
+                ['NEW', 'New'],
+                ['REVIEWING', 'Reviewing'],
+                ['IN_PROGRESS', 'In Progress'],
+                ['RESOLVED', 'Resolved'],
+                ['CLOSED', 'Closed'],
+                ['REJECTED', 'Rejected'],
+              ],
+            },
+            {
+              label: 'Priority',
+              value: priorityFilter,
+              setter: setPriorityFilter,
+              options: [
+                ['all', 'All Priorities'],
+                ['CRITICAL', 'Critical'],
+                ['HIGH', 'High'],
+                ['MEDIUM', 'Medium'],
+                ['LOW', 'Low'],
+              ],
+            },
+          ].map((f) => (
+            <div key={f.label} className="space-y-1.5">
+              <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                {f.label}
+              </label>
+              <Select value={f.value} onValueChange={f.setter}>
+                <SelectTrigger className="border-white/12 bg-white/6 text-white focus:border-violet-400/40 focus:ring-violet-400/15">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="BUG">Bug Report</SelectItem>
-                  <SelectItem value="FEATURE">Feature Request</SelectItem>
-                  <SelectItem value="IMPROVEMENT">Improvement</SelectItem>
-                  <SelectItem value="QUESTION">Question</SelectItem>
-                  <SelectItem value="GENERAL">General</SelectItem>
+                <SelectContent className="border-white/12 bg-slate-900 text-white">
+                  {f.options.map(([val, label]) => (
+                    <SelectItem
+                      key={val}
+                      value={val}
+                      className="focus:bg-purple-500/20 focus:text-white"
+                    >
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="NEW">New</SelectItem>
-                  <SelectItem value="REVIEWING">Reviewing</SelectItem>
-                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                  <SelectItem value="RESOLVED">Resolved</SelectItem>
-                  <SelectItem value="CLOSED">Closed</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="CRITICAL">Critical</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="LOW">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </div>
 
       {/* Feedback List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Feedback Items ({feedback.length})</CardTitle>
-          <CardDescription>Click on any item to view details and manage</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
-            </div>
-          ) : feedback.length === 0 ? (
-            <div className="text-muted-foreground py-12 text-center">
-              <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-              <p>No feedback found matching the filters</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {feedback.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card
-                    className="hover:border-primary cursor-pointer transition-colors"
-                    onClick={() => {
-                      setSelectedFeedback(item);
-                      setAdminNotes(item.adminNotes || '');
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        {/* User Avatar */}
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={item.user?.image || undefined} />
-                          <AvatarFallback>
-                            {item.user?.name?.[0] || item.user?.email[0] || '?'}
-                          </AvatarFallback>
-                        </Avatar>
+      <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-slate-900/52 backdrop-blur-2xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+        <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Feedback Items ({feedback.length})</h2>
+            <p className="text-xs text-slate-500">Click on any item to view details and manage</p>
+          </div>
+        </div>
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-transparent border-t-violet-500" />
+          </div>
+        ) : feedback.length === 0 ? (
+          <div className="py-16 text-center">
+            <MessageSquare className="mx-auto mb-3 h-10 w-10 text-slate-700" />
+            <p className="text-sm text-slate-500">No feedback found matching the filters</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {feedback.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className="group flex cursor-pointer items-start gap-4 px-5 py-4 transition-colors hover:bg-white/4"
+                onClick={() => {
+                  setSelectedFeedback(item);
+                  setAdminReply(item.adminReply || '');
+                }}
+              >
+                <Avatar className="h-9 w-9 shrink-0 ring-2 ring-white/8">
+                  <AvatarImage src={item.user?.image || undefined} />
+                  <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-xs font-bold text-white">
+                    {item.user?.name?.[0] || item.user?.email[0] || '?'}
+                  </AvatarFallback>
+                </Avatar>
 
-                        <div className="flex-1 space-y-2">
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="gap-1">
-                                  {getTypeIcon(item.type)}
-                                  {item.type}
-                                </Badge>
-                                <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                                <Badge className={getPriorityColor(item.priority)}>
-                                  {item.priority}
-                                </Badge>
-                                {item.category && (
-                                  <Badge variant="secondary">{item.category}</Badge>
-                                )}
-                              </div>
-                              <h3 className="mt-2 font-semibold">{item.title}</h3>
-                              <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
-                                {item.description}
-                              </p>
-                            </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusColor(item.status)}`}
+                    >
+                      {item.status}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getPriorityColor(item.priority)}`}
+                    >
+                      {item.priority}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                      {getTypeIcon(item.type)}
+                      {item.type}
+                    </span>
+                    {item.category && (
+                      <span className="inline-flex rounded-full border border-white/8 bg-white/5 px-2 py-0.5 text-[10px] text-slate-500">
+                        {item.category}
+                        {item.adminReply && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                            <Reply className="h-2.5 w-2.5" />
+                            Replied
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-sm font-semibold text-white transition-colors group-hover:text-violet-300">
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{item.description}</p>
+                  <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-600">
+                    <span>{item.user?.name || item.user?.email || 'Anonymous'}</span>
+                    <span>·</span>
+                    <span>{formatDistanceToNow(new Date(item.createdAt))} ago</span>
+                  </div>
+                </div>
 
-                            {item.rating && (
-                              <div className="flex gap-0.5">
-                                {[...Array(item.rating)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className="h-3 w-3 fill-yellow-400 text-yellow-400"
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Footer */}
-                          <div className="text-muted-foreground flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-3">
-                              <span>{item.user?.name || item.user?.email || 'Anonymous'}</span>
-                              <span>•</span>
-                              <span>{formatDistanceToNow(new Date(item.createdAt))} ago</span>
-                            </div>
-                            {item.assignee && (
-                              <span className="flex items-center gap-1">
-                                Assigned to {item.assignee.name || item.assignee.email}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {item.rating && (
+                  <div className="flex shrink-0 gap-0.5">
+                    {[...Array(item.rating)].map((_, i) => (
+                      <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Feedback Detail Dialog */}
       <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-white/12 bg-slate-900/96 text-white shadow-2xl shadow-black/30">
           {selectedFeedback && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle className="flex items-center gap-2 text-white">
                   {getTypeIcon(selectedFeedback.type)}
                   {selectedFeedback.title}
                 </DialogTitle>
@@ -482,30 +512,36 @@ export default function AdminFeedbackPage() {
               <div className="space-y-6">
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={getStatusColor(selectedFeedback.status)}>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusColor(selectedFeedback.status)}`}
+                  >
                     {selectedFeedback.status}
-                  </Badge>
-                  <Badge className={getPriorityColor(selectedFeedback.priority)}>
+                  </span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPriorityColor(selectedFeedback.priority)}`}
+                  >
                     {selectedFeedback.priority}
-                  </Badge>
+                  </span>
                   {selectedFeedback.category && (
-                    <Badge variant="secondary">{selectedFeedback.category}</Badge>
+                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-400">
+                      {selectedFeedback.category}
+                    </span>
                   )}
                 </div>
 
                 {/* User Info */}
                 <div className="flex items-center gap-3">
-                  <Avatar>
+                  <Avatar className="ring-2 ring-white/10">
                     <AvatarImage src={selectedFeedback.user?.image || undefined} />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 font-bold text-white">
                       {selectedFeedback.user?.name?.[0] || selectedFeedback.user?.email[0] || '?'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-semibold text-white">
                       {selectedFeedback.user?.name || selectedFeedback.user?.email || 'Anonymous'}
                     </p>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-xs text-slate-400">
                       {formatDistanceToNow(new Date(selectedFeedback.createdAt))} ago
                     </p>
                   </div>
@@ -513,14 +549,20 @@ export default function AdminFeedbackPage() {
 
                 {/* Description */}
                 <div>
-                  <h4 className="mb-2 font-semibold">Description</h4>
-                  <p className="text-sm whitespace-pre-wrap">{selectedFeedback.description}</p>
+                  <h4 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    Description
+                  </h4>
+                  <p className="rounded-xl border border-white/8 bg-white/3 p-3 text-sm whitespace-pre-wrap text-slate-300">
+                    {selectedFeedback.description}
+                  </p>
                 </div>
 
                 {/* Rating */}
                 {selectedFeedback.rating && (
                   <div>
-                    <h4 className="mb-2 font-semibold">Rating</h4>
+                    <h4 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                      Rating
+                    </h4>
                     <div className="flex gap-1">
                       {[...Array(selectedFeedback.rating)].map((_, i) => (
                         <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
@@ -532,12 +574,14 @@ export default function AdminFeedbackPage() {
                 {/* URL */}
                 {selectedFeedback.url && (
                   <div>
-                    <h4 className="mb-2 font-semibold">Page URL</h4>
+                    <h4 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                      Page URL
+                    </h4>
                     <a
                       href={selectedFeedback.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary text-sm hover:underline"
+                      className="text-sm text-violet-400 hover:text-violet-300 hover:underline"
                     >
                       {selectedFeedback.url}
                     </a>
@@ -546,16 +590,18 @@ export default function AdminFeedbackPage() {
 
                 {/* Status Update */}
                 <div className="space-y-2">
-                  <label className="font-semibold">Update Status</label>
+                  <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    Update Status
+                  </label>
                   <Select
                     value={selectedFeedback.status}
                     onValueChange={(status) => updateFeedback(selectedFeedback.id, { status })}
                     disabled={updating}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-white/12 bg-white/6 text-white focus:border-violet-400/40">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="border-white/12 bg-slate-900 text-white">
                       <SelectItem value="NEW">New</SelectItem>
                       <SelectItem value="REVIEWING">Reviewing</SelectItem>
                       <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
@@ -568,16 +614,18 @@ export default function AdminFeedbackPage() {
 
                 {/* Priority Update */}
                 <div className="space-y-2">
-                  <label className="font-semibold">Update Priority</label>
+                  <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    Update Priority
+                  </label>
                   <Select
                     value={selectedFeedback.priority}
                     onValueChange={(priority) => updateFeedback(selectedFeedback.id, { priority })}
                     disabled={updating}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-white/12 bg-white/6 text-white focus:border-violet-400/40">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="border-white/12 bg-slate-900 text-white">
                       <SelectItem value="LOW">Low</SelectItem>
                       <SelectItem value="MEDIUM">Medium</SelectItem>
                       <SelectItem value="HIGH">High</SelectItem>
@@ -586,22 +634,61 @@ export default function AdminFeedbackPage() {
                   </Select>
                 </div>
 
-                {/* Admin Notes */}
+                {/* Reply to User */}
                 <div className="space-y-2">
-                  <label className="font-semibold">Admin Notes</label>
+                  <div className="flex items-center gap-2">
+                    <Reply className="h-3.5 w-3.5 text-slate-400" />
+                    <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                      Reply to User
+                    </label>
+                    <span className="ml-auto text-[10px] text-slate-600">
+                      optional — visible to user
+                    </span>
+                  </div>
+                  {selectedFeedback.repliedAt && (
+                    <p className="text-[10px] text-emerald-400">
+                      Replied {formatDistanceToNow(new Date(selectedFeedback.repliedAt))} ago
+                    </p>
+                  )}
                   <Textarea
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Add internal notes (not visible to users)..."
+                    value={adminReply}
+                    onChange={(e) => setAdminReply(e.target.value)}
+                    placeholder="Write a reply to the user (they will receive a notification)..."
                     rows={4}
+                    className="border-white/12 bg-white/6 text-white placeholder:text-slate-500 focus:border-emerald-400/40 focus:ring-emerald-400/15"
                   />
-                  <Button
-                    onClick={() => updateFeedback(selectedFeedback.id, { adminNotes })}
-                    disabled={updating || adminNotes === selectedFeedback.adminNotes}
-                    size="sm"
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateFeedback(selectedFeedback.id, { adminReply })}
+                      disabled={updating || adminReply === (selectedFeedback.adminReply || '')}
+                      className="rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-sm font-medium text-emerald-400 transition-all hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {selectedFeedback.adminReply ? 'Update Reply' : 'Send Reply'}
+                    </button>
+                    {selectedFeedback.adminReply && (
+                      <button
+                        onClick={() => {
+                          setAdminReply('');
+                          updateFeedback(selectedFeedback.id, { adminReply: '' });
+                        }}
+                        disabled={updating}
+                        className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Remove Reply
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/10 pt-4">
+                  <button
+                    onClick={() => deleteFeedback(selectedFeedback.id)}
+                    disabled={updating}
+                    className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Save Notes
-                  </Button>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Feedback
+                  </button>
                 </div>
               </div>
             </>

@@ -228,7 +228,7 @@ export function InviteDetailsModal({
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={inviteDetails.invitedBy.image || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white">
+                <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-white">
                   {getInitials(inviteDetails.invitedBy.name, inviteDetails.invitedBy.email)}
                 </AvatarFallback>
               </Avatar>
@@ -284,7 +284,7 @@ export function InviteDetailsModal({
               <Button
                 onClick={handleAccept}
                 disabled={loading}
-                className="gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700"
+                className="gap-2 bg-linear-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700"
               >
                 {loading && actionType === 'accept' && <Loader2 className="h-4 w-4 animate-spin" />}
                 {!loading && <CheckCircle2 className="h-4 w-4" />}

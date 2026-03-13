@@ -1130,6 +1130,7 @@ Phase 3 (12 months): Add organization tier
    ```
 
 3. **Billing Portal**
+
    ```typescript
    async function openBillingPortal(workspaceId: string) {
      const workspace = await prisma.workspace.findUnique({

@@ -34,12 +34,16 @@ interface Activity {
   type: string;
   createdAt: string;
   metadata?: Record<string, unknown>;
+  actorName?: string | null;
+  actorEmail?: string | null;
+  actorImage?: string | null;
+  workspaceName?: string | null;
   actor: {
     id: string;
     name: string | null;
     email: string;
     image: string | null;
-  };
+  } | null;
 }
 
 interface ActivityFeedProps {
@@ -159,7 +163,13 @@ export function ActivityFeed({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((activity) => {
-        const actorName = (activity.actor.name || activity.actor.email).toLowerCase();
+        const actorName = (
+          activity.actor?.name ||
+          activity.actor?.email ||
+          activity.actorName ||
+          activity.actorEmail ||
+          ''
+        ).toLowerCase();
         const message = getActivitySearchText(activity).toLowerCase();
         return actorName.includes(query) || message.includes(query);
       });
@@ -212,7 +222,12 @@ export function ActivityFeed({
   };
 
   const getActivityMessage = (activity: Activity) => {
-    const actorName = activity.actor.name || activity.actor.email;
+    const actorName =
+      activity.actor?.name ||
+      activity.actor?.email ||
+      activity.actorName ||
+      activity.actorEmail ||
+      'A user';
     const metadata = activity.metadata || {};
 
     switch (activity.type) {
@@ -317,31 +332,41 @@ export function ActivityFeed({
       case 'GITHUB_IMPORT':
         return (
           <>
-            <strong>{actorName}</strong> imported document from GitHub:{' '}
-            <span className="font-medium">
-              {String(metadata.repoName || '')} / {String(metadata.filePath || '')}
-            </span>
+            <strong>{actorName}</strong> imported{' '}
+            <span className="font-medium">{String(metadata.filesImported || 0)} file(s)</span> from{' '}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">
+              {String(metadata.repoName || metadata.repository || '')}
+            </code>
           </>
         );
       case 'GITHUB_EXPORT':
         return (
           <>
-            <strong>{actorName}</strong> exported document to GitHub:{' '}
-            <span className="font-medium">
-              {String(metadata.repoName || '')} / {String(metadata.filePath || '')}
-            </span>
+            <strong>{actorName}</strong> exported{' '}
+            <span className="font-medium">{String(metadata.filesExported || 0)} file(s)</span> to{' '}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">
+              {String(metadata.repoName || metadata.repository || '')}
+            </code>
           </>
         );
       case 'MEMBER_ADDED':
         return (
           <>
-            <strong>{actorName}</strong> added a new member
+            <strong>{actorName}</strong> added{' '}
+            <span className="font-medium">
+              {String(
+                metadata.userName || metadata.userEmail || metadata.memberUserName || 'a member'
+              )}
+            </span>
           </>
         );
       case 'MEMBER_REMOVED':
         return (
           <>
-            <strong>{actorName}</strong> removed a member
+            <strong>{actorName}</strong> removed{' '}
+            <span className="font-medium text-red-600">
+              {String(metadata.removedUserName || metadata.removedUserEmail || 'a member')}
+            </span>
           </>
         );
       default:
@@ -495,11 +520,17 @@ export function ActivityFeed({
               {/* Actor Avatar */}
               <Avatar className="h-9 w-9 shrink-0">
                 <AvatarImage
-                  src={activity.actor.image || undefined}
-                  alt={activity.actor.name || ''}
+                  src={activity.actor?.image || activity.actorImage || undefined}
+                  alt={activity.actor?.name || activity.actorName || ''}
                 />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-semibold text-white">
-                  {(activity.actor.name || activity.actor.email)
+                <AvatarFallback className="bg-linear-to-br from-blue-500 to-purple-600 text-xs font-semibold text-white">
+                  {(
+                    activity.actor?.name ||
+                    activity.actor?.email ||
+                    activity.actorName ||
+                    activity.actorEmail ||
+                    'A user'
+                  )
                     .split(' ')
                     .map((n) => n[0])
                     .join('')

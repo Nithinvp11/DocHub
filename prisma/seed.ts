@@ -99,8 +99,7 @@ async function main() {
   const gettingStarted = await prisma.document.create({
     data: {
       title: 'Getting Started Guide',
-      content:
-        '# Getting Started\\n\\nWelcome to DocHub! This guide will help you get started.',
+      content: '# Getting Started\\n\\nWelcome to DocHub! This guide will help you get started.',
       path: '/getting-started',
       workspaceId: techWorkspace.id,
       authorId: alice.id,

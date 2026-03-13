@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Github,
   Loader2,
@@ -246,13 +245,40 @@ export function WorkspaceGitHubSyncDialog({
     }
   };
 
+  const resultStats = operationResult
+    ? ([
+        operationResult.totalExported !== undefined
+          ? {
+              label: 'Exported',
+              value: operationResult.totalExported,
+              valueClassName: 'text-green-400',
+            }
+          : null,
+        operationResult.totalImported !== undefined
+          ? {
+              label: 'Imported',
+              value: operationResult.totalImported,
+              valueClassName: 'text-blue-400',
+            }
+          : null,
+        {
+          label: 'Skipped',
+          value: operationResult.totalSkipped || 0,
+          valueClassName: 'text-yellow-400',
+        },
+      ].filter(Boolean) as Array<{ label: string; value: number; valueClassName: string }>)
+    : [];
+
   return (
     <>
       {/* Main Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           {children || (
-            <Button variant="outline" size="sm">
+            <Button
+              size="sm"
+              className="h-10 rounded-xl border border-cyan-400/20 bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-cyan-600/20 hover:from-blue-700 hover:to-cyan-700"
+            >
               <Github className="mr-2 h-4 w-4" />
               GitHub Sync
             </Button>
@@ -339,29 +365,18 @@ export function WorkspaceGitHubSyncDialog({
                         {operationResult.success ? 'Operation Completed' : 'Operation Failed'}
                       </h3>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      {operationResult.totalExported !== undefined && (
-                        <div>
-                          <div className="text-slate-400">Exported</div>
-                          <div className="text-xl font-bold text-green-400">
-                            {operationResult.totalExported}
+                    <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+                      {resultStats.map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="rounded-lg border border-white/10 bg-slate-900/40 p-3"
+                        >
+                          <div className="text-slate-400">{stat.label}</div>
+                          <div className={`text-2xl font-bold ${stat.valueClassName}`}>
+                            {stat.value}
                           </div>
                         </div>
-                      )}
-                      {operationResult.totalImported !== undefined && (
-                        <div>
-                          <div className="text-slate-400">Imported</div>
-                          <div className="text-xl font-bold text-blue-400">
-                            {operationResult.totalImported}
-                          </div>
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-slate-400">Skipped</div>
-                        <div className="text-xl font-bold text-yellow-400">
-                          {operationResult.totalSkipped || 0}
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
@@ -373,52 +388,50 @@ export function WorkspaceGitHubSyncDialog({
                           Files ({operationResult.files.length})
                         </h4>
                       </div>
-                      <ScrollArea className="h-[200px]">
-                        <div className="space-y-2 p-3">
-                          {operationResult.files.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex items-start gap-2 rounded border border-white/5 bg-white/5 p-2 text-xs"
-                            >
-                              {file.status === 'created' || file.status === 'updated' ? (
-                                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
-                              ) : file.status === 'imported' ? (
-                                <Download className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
-                              ) : file.status === 'skipped' ? (
-                                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-400" />
-                              ) : (
-                                <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-3 w-3 text-slate-400" />
-                                  <span className="truncate font-mono text-slate-200">
-                                    {file.fileName || file.githubPath}
-                                  </span>
-                                </div>
-                                <div className="mt-1 flex items-center gap-2">
-                                  <span
-                                    className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                                      file.status === 'created' || file.status === 'updated'
-                                        ? 'bg-green-500/20 text-green-300'
-                                        : file.status === 'imported'
-                                          ? 'bg-blue-500/20 text-blue-300'
-                                          : file.status === 'skipped'
-                                            ? 'bg-yellow-500/20 text-yellow-300'
-                                            : 'bg-red-500/20 text-red-300'
-                                    }`}
-                                  >
-                                    {file.status}
-                                  </span>
-                                  {file.reason && (
-                                    <span className="truncate text-slate-400">{file.reason}</span>
-                                  )}
-                                </div>
+                      <div className="max-h-[260px] space-y-2 overflow-y-auto p-3">
+                        {operationResult.files.map((file, index) => (
+                          <div
+                            key={index}
+                            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded border border-white/10 bg-white/5 p-2 text-xs"
+                          >
+                            {file.status === 'created' || file.status === 'updated' ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-400" />
+                            ) : file.status === 'imported' ? (
+                              <Download className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+                            ) : file.status === 'skipped' ? (
+                              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-yellow-400" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-3 w-3 text-slate-400" />
+                                <span className="truncate font-mono text-slate-200">
+                                  {file.fileName || file.githubPath}
+                                </span>
                               </div>
+                              {file.reason && (
+                                <p className="mt-1 truncate text-[11px] text-slate-400">
+                                  {file.reason}
+                                </p>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
+                            <span
+                              className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                file.status === 'created' || file.status === 'updated'
+                                  ? 'bg-green-500/20 text-green-300'
+                                  : file.status === 'imported'
+                                    ? 'bg-blue-500/20 text-blue-300'
+                                    : file.status === 'skipped'
+                                      ? 'bg-yellow-500/20 text-yellow-300'
+                                      : 'bg-red-500/20 text-red-300'
+                              }`}
+                            >
+                              {file.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 

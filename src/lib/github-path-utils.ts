@@ -14,6 +14,26 @@ export interface GenerateGitHubPathOptions {
 }
 
 /**
+ * Check if a path points to a markdown-like file.
+ */
+export function isMarkdownPath(path: string): boolean {
+  return /\.(md|markdown|mdx)$/i.test(path);
+}
+
+/**
+ * Derive a document title from a markdown path.
+ * Examples:
+ * - docs/planning/test-workspace-beta.md -> test-workspace-beta
+ * - README.md -> README
+ */
+export function deriveTitleFromMarkdownPath(markdownPath: string): string {
+  const normalized = markdownPath.replace(/^\/+/, '');
+  const filename = normalized.split('/').pop() || normalized;
+  const title = filename.replace(/\.(md|markdown|mdx)$/i, '').trim();
+  return title || 'Imported Document';
+}
+
+/**
  * Generate a unique GitHub path for a document
  * Format: ${slugify(phase)}/${slugify(type)}/${slugify(title)}.md
  *

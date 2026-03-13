@@ -146,4 +146,14 @@ export class NotificationService {
       link: `/admin/feedback/${feedbackId}`,
     });
   }
+
+  static async notifyFeedbackReply(userId: string, feedbackTitle: string, feedbackId: string) {
+    return this.create({
+      userId,
+      type: 'FEEDBACK_REPLY',
+      title: 'Admin replied to your feedback',
+      message: `Your feedback "${feedbackTitle}" received a reply from the team`,
+      link: `/settings?tab=feedback`,
+    });
+  }
 }

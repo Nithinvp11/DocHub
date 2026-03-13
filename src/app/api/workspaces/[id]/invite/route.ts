@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
@@ -39,6 +40,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!workspace) {
       return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+    }
+
+    if (workspace.memberLimit !== null) {
+      const currentMembers = await prisma.workspaceMember.count({
+        where: { workspaceId: id },
+      });
+      if (currentMembers >= workspace.memberLimit) {
+        return NextResponse.json(
+          { error: `Workspace member limit (${workspace.memberLimit}) has been reached` },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if email belongs to an existing user
@@ -119,22 +132,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
 
       // Log the activity
-      await tx.activity.create({
-        data: {
-          type: 'INVITE_SENT',
-          actorId: user.id,
-          workspaceId: id,
-          entityType: 'workspace_invite',
-          entityId: newInvite.id,
-          metadata: {
-            invitedEmail: email,
-            invitedUserId: invitedUser?.id,
-            invitedUserName: invitedUser?.name,
-            grantedById: user.id,
-            grantRootId,
-            message,
-            permissions: normalizedPermissions,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'INVITE_SENT',
+        actorId: user.id,
+        workspaceId: id,
+        entityType: 'workspace_invite',
+        entityId: newInvite.id,
+        metadata: {
+          invitedEmail: email,
+          invitedUserId: invitedUser?.id,
+          invitedUserName: invitedUser?.name,
+          grantedById: user.id,
+          grantRootId,
+          message,
+          permissions: normalizedPermissions,
         },
       });
 

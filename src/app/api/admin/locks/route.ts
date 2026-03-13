@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verify } from 'jsonwebtoken';
 import { getAllActiveLocks } from '@/lib/admin';
 
+// TODO: unused API route — verify before deletion
+
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key';
 
 interface JWTPayload {

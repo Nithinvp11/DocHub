@@ -4,13 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import {
-  getGitHubClient,
-  listPullRequests,
-  getPullRequest,
-  getPullRequestFiles,
-  GitHubPR,
-} from './client';
+import { getGitHubClient, listPullRequests, getPullRequestFiles, GitHubPR } from './client';
 
 /**
  * Fetch and sync all PRs for a repository

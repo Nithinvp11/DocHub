@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getOpenAPIJSON } from '@/lib/api-docs';
 
+// TODO: unused API route — verify before deletion
+
 /**
  * GET /api/docs/openapi.json
  * Returns the OpenAPI 3.0 specification in JSON format

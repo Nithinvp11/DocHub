@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION, normalizePermissions } from '@/lib/workspace-permission-definitions';
 import { getWorkspaceAccess, resolveGrantRootForDelegation } from '@/lib/workspace-permissions';
+
+class WorkspaceMemberLimitError extends Error {
+  constructor(limit: number) {
+    super(`Workspace member limit (${limit}) has been reached`);
+    this.name = 'WorkspaceMemberLimitError';
+  }
+}
 
 // POST accept workspace invitation
 export async function POST(
@@ -78,6 +86,21 @@ export async function POST(
 
     // Accept invitation and add member in a transaction
     const result = await prisma.$transaction(async (tx) => {
+      const workspaceForLimit = await tx.workspace.findUnique({
+        where: { id: invite.workspaceId },
+        select: { memberLimit: true },
+      });
+
+      if (workspaceForLimit?.memberLimit !== null && workspaceForLimit?.memberLimit !== undefined) {
+        const currentMembers = await tx.workspaceMember.count({
+          where: { workspaceId: invite.workspaceId },
+        });
+
+        if (currentMembers >= workspaceForLimit.memberLimit) {
+          throw new WorkspaceMemberLimitError(workspaceForLimit.memberLimit);
+        }
+      }
+
       const inviterAccess = await getWorkspaceAccess(invite.invitedById, invite.workspaceId);
       const grantRootId =
         invite.grantRootId ?? resolveGrantRootForDelegation(inviterAccess, invite.invitedById);
@@ -119,39 +142,35 @@ export async function POST(
       });
 
       // Log the activity
-      await tx.activity.create({
-        data: {
-          type: 'INVITE_ACCEPTED',
-          actorId: user.id,
-          workspaceId: invite.workspaceId,
-          entityType: 'workspace_invite',
-          entityId: inviteId,
-          metadata: {
-            userName: user.name,
-            userEmail: user.email,
-            invitedById: invite.invitedById,
-            grantRootId,
-            grantDepth,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'INVITE_ACCEPTED',
+        actorId: user.id,
+        workspaceId: invite.workspaceId,
+        entityType: 'workspace_invite',
+        entityId: inviteId,
+        metadata: {
+          userName: user.name,
+          userEmail: user.email,
+          invitedById: invite.invitedById,
+          grantRootId,
+          grantDepth,
         },
       });
 
       // Log member added activity
-      await tx.activity.create({
-        data: {
-          type: 'MEMBER_ADDED',
-          actorId: user.id,
-          workspaceId: invite.workspaceId,
-          entityType: 'workspace_member',
-          entityId: member.id,
-          metadata: {
-            userName: user.name,
-            userEmail: user.email,
-            permissions: member.permissions,
-            grantedById: invite.invitedById,
-            grantRootId,
-            grantDepth,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'MEMBER_ADDED',
+        actorId: user.id,
+        workspaceId: invite.workspaceId,
+        entityType: 'workspace_member',
+        entityId: member.id,
+        metadata: {
+          userName: user.name,
+          userEmail: user.email,
+          permissions: member.permissions,
+          grantedById: invite.invitedById,
+          grantRootId,
+          grantDepth,
         },
       });
 
@@ -179,6 +198,10 @@ export async function POST(
       member: result.member,
     });
   } catch (error) {
+    if (error instanceof WorkspaceMemberLimitError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     console.error('Error accepting workspace invitation:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

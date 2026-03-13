@@ -22,14 +22,10 @@ import {
   Quote,
   Minus,
   CheckSquare,
-  PenTool,
-  GitBranch,
   AlertCircle,
   Info,
   AlertTriangle,
   CheckCircle,
-  ChevronDown,
-  Columns,
 } from 'lucide-react';
 
 interface Command {
@@ -39,20 +35,16 @@ interface Command {
   icon: React.ReactNode;
   keywords: string[];
   action: (editor: Editor) => void;
-  category: 'basic' | 'advanced' | 'media' | 'diagram';
+  category: 'basic' | 'advanced' | 'media';
 }
 
 interface CommandPaletteProps {
   editor: Editor | null;
   isOpen: boolean;
   onClose: () => void;
-  onInsertDiagram?: (
-    type: 'excalidraw' | 'mermaid',
-    data: Record<string, unknown> | string
-  ) => void;
 }
 
-export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: CommandPaletteProps) {
+export function CommandPalette({ editor, isOpen, onClose }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -230,58 +222,6 @@ export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: Com
           .run();
       },
     },
-    {
-      id: 'details',
-      title: 'Collapsible Section',
-      description: 'Expandable/collapsible content',
-      icon: <ChevronDown className="h-4 w-4" />,
-      keywords: ['collapse', 'toggle', 'accordion', 'details', 'expand'],
-      category: 'advanced',
-      action: (ed) => {
-        ed.chain()
-          .focus()
-          .insertContent(
-            '<details><summary>Click to expand</summary><p>Content goes here...</p></details>'
-          )
-          .run();
-      },
-    },
-    {
-      id: 'columns',
-      title: 'Two Columns',
-      description: 'Multi-column layout',
-      icon: <Columns className="h-4 w-4" />,
-      keywords: ['columns', 'layout', 'grid', 'split'],
-      category: 'advanced',
-      action: (ed) => {
-        ed.chain()
-          .focus()
-          .insertContent(
-            '<div class="columns-2 gap-4"><div>Column 1</div><div>Column 2</div></div>'
-          )
-          .run();
-      },
-    },
-
-    // Diagrams
-    {
-      id: 'excalidraw',
-      title: 'Visual Diagram',
-      description: 'Hand-drawn style diagram',
-      icon: <PenTool className="h-4 w-4" />,
-      keywords: ['diagram', 'draw', 'sketch', 'excalidraw', 'visual'],
-      category: 'diagram',
-      action: () => onInsertDiagram?.('excalidraw', {}),
-    },
-    {
-      id: 'mermaid',
-      title: 'Mermaid Diagram',
-      description: 'Code-based flowcharts and diagrams',
-      icon: <GitBranch className="h-4 w-4" />,
-      keywords: ['diagram', 'flowchart', 'mermaid', 'sequence', 'chart'],
-      category: 'diagram',
-      action: () => onInsertDiagram?.('mermaid', ''),
-    },
   ];
 
   const filteredCommands = commands.filter((cmd) => {
@@ -333,7 +273,6 @@ export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: Com
     basic: 'Basic Blocks',
     advanced: 'Advanced',
     media: 'Media',
-    diagram: 'Diagrams',
   };
 
   const groupedCommands = filteredCommands.reduce(
@@ -347,13 +286,13 @@ export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: Com
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl p-0">
-        <DialogHeader className="px-4 pt-4">
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="px-3 pt-3">
           <DialogTitle>Insert Block</DialogTitle>
           <DialogDescription>Search for a block to insert</DialogDescription>
         </DialogHeader>
 
-        <div className="px-4">
+        <div className="px-3">
           <Input
             value={search}
             onChange={(e) => {
@@ -366,10 +305,10 @@ export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: Com
           />
         </div>
 
-        <ScrollArea className="max-h-96 px-4 pb-4">
+        <ScrollArea className="max-h-72 px-3 pb-3">
           {Object.entries(groupedCommands).map(([category, cmds]) => (
-            <div key={category} className="mb-4">
-              <h3 className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            <div key={category} className="mb-3">
+              <h3 className="mb-1.5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
                 {categoryNames[category as keyof typeof categoryNames]}
               </h3>
               <div className="space-y-1">
@@ -381,14 +320,14 @@ export function CommandPalette({ editor, isOpen, onClose, onInsertDiagram }: Com
                     <button
                       key={cmd.id}
                       onClick={() => handleExecute(cmd)}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
                         isSelected ? 'bg-blue-50 text-blue-900' : 'hover:bg-slate-100'
                       }`}
                       onMouseEnter={() => setSelectedIndex(globalIndex)}
                     >
                       <div className="shrink-0">{cmd.icon}</div>
                       <div className="flex-1 overflow-hidden">
-                        <div className="font-medium">{cmd.title}</div>
+                        <div className="text-sm font-medium">{cmd.title}</div>
                         <div className="text-xs text-slate-500">{cmd.description}</div>
                       </div>
                     </button>

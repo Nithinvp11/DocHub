@@ -9,7 +9,7 @@ export async function isAdminByUserIdOrToken(userId?: string | null, adminToken?
     try {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
       if (user?.role === 'ADMIN') return true;
-    } catch (err) {
+    } catch {
       // ignore DB errors here; caller will handle authorization
     }
   }
@@ -19,7 +19,7 @@ export async function isAdminByUserIdOrToken(userId?: string | null, adminToken?
     try {
       const decoded = verify(adminToken, JWT_SECRET) as { isAdmin?: boolean };
       return !!decoded?.isAdmin;
-    } catch (err) {
+    } catch {
       return false;
     }
   }

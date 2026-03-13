@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verify } from 'jsonwebtoken';
-import { getAllUsers, getUserStats } from '@/lib/admin';
-import { z } from 'zod';
+import { getAllUsers } from '@/lib/admin';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 

@@ -15,19 +15,13 @@ export async function GET(req: NextRequest) {
     const token = req.cookies.get('admin-token')?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { authenticated: false },
-        { status: 401 }
-      );
+      return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
     const decoded = verify(token, JWT_SECRET) as JWTPayload;
 
     if (!decoded.isAdmin) {
-      return NextResponse.json(
-        { authenticated: false },
-        { status: 403 }
-      );
+      return NextResponse.json({ authenticated: false }, { status: 403 });
     }
 
     return NextResponse.json({
@@ -38,10 +32,7 @@ export async function GET(req: NextRequest) {
         role: decoded.role,
       },
     });
-  } catch (error) {
-    return NextResponse.json(
-      { authenticated: false },
-      { status: 401 }
-    );
+  } catch {
+    return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 }

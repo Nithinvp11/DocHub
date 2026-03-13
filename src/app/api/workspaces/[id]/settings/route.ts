@@ -8,6 +8,7 @@ import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-perm
 const updateWorkspaceSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
+  memberLimit: z.number().int().min(1).nullable().optional(),
 });
 
 // PATCH /api/workspaces/[id]/settings - Update workspace settings
@@ -22,6 +23,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
     const data = updateWorkspaceSchema.parse(body);
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.WORKSPACE_EDIT);
+
+    if (data.memberLimit !== undefined && data.memberLimit !== null) {
+      const currentMembers = await prisma.workspaceMember.count({
+        where: { workspaceId },
+      });
+
+      if (data.memberLimit < currentMembers) {
+        return NextResponse.json(
+          {
+            error: `Member limit cannot be less than current joined members (${currentMembers}).`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Update workspace
     const workspace = await prisma.workspace.update({

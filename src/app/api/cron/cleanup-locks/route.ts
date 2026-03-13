@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cleanupExpiredLocks } from '@/lib/document-lock';
 
+// TODO: unused API route — verify before deletion
+
 /**
  * Cron endpoint for cleaning up expired locks
  *

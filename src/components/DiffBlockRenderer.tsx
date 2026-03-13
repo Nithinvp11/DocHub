@@ -65,13 +65,13 @@ export function DiffBlockRenderer({
       {diffBlock.metadata && (
         <div className="mb-3 flex flex-wrap gap-2.5 text-xs">
           {diffBlock.metadata.headingLevelChange && (
-            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
+            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-linear-to-r from-purple-500 to-violet-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <ArrowRight className="h-3 w-3" />H{diffBlock.metadata.headingLevelChange.from} → H
               {diffBlock.metadata.headingLevelChange.to}
             </span>
           )}
           {diffBlock.metadata.checkboxStateChange && (
-            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
+            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-linear-to-r from-blue-500 to-cyan-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               {diffBlock.metadata.checkboxStateChange.to ? (
                 <CheckSquare className="h-3 w-3" />
               ) : (
@@ -82,13 +82,13 @@ export function DiffBlockRenderer({
             </span>
           )}
           {diffBlock.metadata.linkHrefChange && (
-            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
+            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-linear-to-r from-cyan-500 to-teal-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <ArrowRight className="h-3 w-3" />
               Link changed
             </span>
           )}
           {diffBlock.metadata.imageSrcChange && (
-            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
+            <span className="animate-in fade-in slide-in-from-left-2 flex items-center gap-1.5 rounded-full bg-linear-to-r from-indigo-500 to-purple-600 px-3 py-1.5 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <ImageIcon className="h-3 w-3" />
               Image changed
             </span>
@@ -172,8 +172,8 @@ function Heading({
   const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   const className =
     {
-      1: 'text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent',
-      2: 'text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent',
+      1: 'text-3xl font-bold bg-linear-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent',
+      2: 'text-2xl font-bold bg-linear-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent',
       3: 'text-xl font-semibold text-slate-800',
     }[level] || 'text-lg font-semibold text-slate-700';
 
@@ -343,7 +343,7 @@ function TaskListItem({
   return (
     <li className="animate-in fade-in slide-in-from-left-1 flex items-start gap-3 duration-300">
       <span
-        className={`transition-all duration-300 ${checkboxChanged ? 'animate-pulse rounded-lg bg-gradient-to-br from-amber-200 to-yellow-200 p-1 shadow-sm' : 'p-1'}`}
+        className={`transition-all duration-300 ${checkboxChanged ? 'animate-pulse rounded-lg bg-linear-to-br from-amber-200 to-yellow-200 p-1 shadow-sm' : 'p-1'}`}
       >
         {isChecked ? (
           <CheckSquare className="mt-0.5 h-5 w-5 text-emerald-600 transition-all hover:scale-110" />
@@ -386,7 +386,7 @@ function Blockquote({
   side: 'left' | 'right';
 }) {
   return (
-    <blockquote className="animate-in fade-in slide-in-from-left-2 border-gradient-to-b rounded-r-lg border-l-4 bg-gradient-to-r from-blue-500 from-slate-50 via-purple-500 to-blue-50/30 to-pink-500 py-2 pr-4 pl-5 text-slate-700 italic shadow-sm duration-500">
+    <blockquote className="animate-in fade-in slide-in-from-left-2 border-gradient-to-b rounded-r-lg border-l-4 bg-linear-to-r from-blue-500 from-slate-50 via-purple-500 to-blue-50/30 to-pink-500 py-2 pr-4 pl-5 text-slate-700 italic shadow-sm duration-500">
       {segments ? <InlineContent segments={segments} side={side} /> : <TextContent node={node} />}
     </blockquote>
   );
@@ -413,10 +413,10 @@ function CodeBlock({
 
   return (
     <div className="group animate-in fade-in slide-in-from-bottom-2 relative duration-500">
-      <div className="absolute top-3 right-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-1 text-xs font-medium text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl">
+      <div className="absolute top-3 right-3 rounded-full bg-linear-to-r from-indigo-600 to-purple-600 px-3 py-1 text-xs font-medium text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl">
         {language}
       </div>
-      <pre className="overflow-x-auto rounded-lg border border-slate-700/50 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 text-sm text-slate-100 shadow-md transition-all hover:shadow-lg">
+      <pre className="overflow-x-auto rounded-lg border border-slate-700/50 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-5 text-sm text-slate-100 shadow-md transition-all hover:shadow-lg">
         <code>
           {inlineSegments ? (
             <InlineContentCode segments={inlineSegments} side={side} />
@@ -449,9 +449,9 @@ function InlineContentCode({
       {filteredSegments.map((segment, i) => {
         let className = '';
         if (segment.status === 'added') {
-          className = 'bg-gradient-to-r from-green-600 to-emerald-600 px-1 rounded';
+          className = 'bg-linear-to-r from-green-600 to-emerald-600 px-1 rounded';
         } else if (segment.status === 'removed') {
-          className = 'bg-gradient-to-r from-red-600 to-rose-600 px-1 rounded line-through';
+          className = 'bg-linear-to-r from-red-600 to-rose-600 px-1 rounded line-through';
         }
         return (
           <span key={i} className={className}>
@@ -478,7 +478,7 @@ function ImageNode({ node, diffBlock }: { node: ProseMirrorNode; diffBlock: Diff
           className="max-h-64 rounded-xl border-2 border-slate-200 object-contain shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
         />
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="flex h-32 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-linear-to-br from-slate-50 to-slate-100">
           <ImageIcon className="h-10 w-10 text-slate-400 transition-all hover:scale-110 hover:text-slate-600" />
         </div>
       )}
@@ -523,10 +523,10 @@ function InlineSegment({ segment }: { segment: InlineDiffSegment }) {
 
   if (segment.status === 'added') {
     className =
-      'bg-gradient-to-r from-green-200 to-emerald-200 px-1 py-0.5 rounded transition-all hover:from-green-300 hover:to-emerald-300';
+      'bg-linear-to-r from-green-200 to-emerald-200 px-1 py-0.5 rounded transition-all hover:from-green-300 hover:to-emerald-300';
   } else if (segment.status === 'removed') {
     className =
-      'bg-gradient-to-r from-red-200 to-rose-200 px-1 py-0.5 rounded line-through transition-all hover:from-red-300 hover:to-rose-300';
+      'bg-linear-to-r from-red-200 to-rose-200 px-1 py-0.5 rounded line-through transition-all hover:from-red-300 hover:to-rose-300';
   }
   // unchanged has no special styling
 

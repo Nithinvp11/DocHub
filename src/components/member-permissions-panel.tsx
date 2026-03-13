@@ -285,7 +285,7 @@ export function MemberPermissionsPanel({
                         src={member.user.image || undefined}
                         alt={member.user.name || member.user.email}
                       />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-bold text-white">
+                      <AvatarFallback className="bg-linear-to-br from-blue-500 to-indigo-600 text-xs font-bold text-white">
                         {(member.user.name || member.user.email).charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>

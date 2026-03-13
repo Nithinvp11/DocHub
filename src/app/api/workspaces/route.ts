@@ -4,11 +4,11 @@ import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
-import { PAGINATION_LIMITS } from '@/lib/constants';
 
 const workspaceSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
+  memberLimit: z.number().int().min(1).nullable().optional(),
 });
 
 // GET all workspaces for current user
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, description } = workspaceSchema.parse(body);
+    const { name, description, memberLimit } = workspaceSchema.parse(body);
 
     // Sanitize inputs
     const sanitizedName = sanitizeText(name);
@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: sanitizedName,
         description: sanitizedDescription,
+        memberLimit: memberLimit ?? null,
         ownerId: user.id,
       },
       include: {

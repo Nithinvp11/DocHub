@@ -1,6 +1,26 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+
+async function ensureDailyLoginEvent(userId: string) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const existingLoginToday = await prisma.loginEvent.findFirst({
+    where: {
+      userId,
+      createdAt: { gte: startOfToday },
+    },
+    select: { id: true },
+  });
+
+  if (!existingLoginToday) {
+    await prisma.loginEvent.create({
+      data: { userId },
+    });
+  }
+}
 
 /**
  * Get the current session on the server side
@@ -19,6 +39,14 @@ export async function requireAuth() {
 
   if (!session || !session.user) {
     redirect('/auth');
+  }
+
+  if (session.user.id) {
+    try {
+      await ensureDailyLoginEvent(session.user.id);
+    } catch (error) {
+      console.error('Failed to ensure daily login event:', error);
+    }
   }
 
   return session;

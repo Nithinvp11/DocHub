@@ -231,15 +231,17 @@ export function DocumentGitHubSync({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button variant="outline" size="sm">
-            <Github className="mr-2 h-4 w-4" />
-            GitHub Sync
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-lg">
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          {children || (
+            <Button variant="outline" size="sm">
+              <Github className="mr-2 h-4 w-4" />
+              GitHub Sync
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
+      <DialogContent className="border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center text-white">
             <Github className="mr-2 h-5 w-5" />

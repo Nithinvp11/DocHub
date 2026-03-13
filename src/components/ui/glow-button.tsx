@@ -14,13 +14,13 @@ export interface GlowButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref'> 
 
 const variantStyles = {
   primary:
-    'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white border border-purple-500/20 shadow-lg shadow-purple-600/20 hover:shadow-purple-600/40',
+    'bg-linear-to-r from-purple-600 to-fuchsia-600 text-white border border-purple-500/20 shadow-lg shadow-purple-600/20 hover:shadow-purple-600/40',
   secondary: 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white',
   ghost: 'bg-transparent text-slate-300 hover:bg-white/5 hover:text-white',
   outline:
     'bg-transparent text-purple-400 border border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50',
   danger:
-    'bg-gradient-to-r from-red-600 to-rose-600 text-white border border-red-500/20 shadow-lg shadow-red-600/20 hover:shadow-red-600/40',
+    'bg-linear-to-r from-red-600 to-rose-600 text-white border border-red-500/20 shadow-lg shadow-red-600/20 hover:shadow-red-600/40',
 };
 
 const sizeStyles = {

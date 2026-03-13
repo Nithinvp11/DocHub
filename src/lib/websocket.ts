@@ -1,7 +1,5 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { getServerSession } from 'next-auth';
-import { authOptions } from './auth';
 import { prisma } from './prisma';
 
 export interface SocketUser {

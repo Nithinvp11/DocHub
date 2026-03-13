@@ -201,7 +201,7 @@ export default function FavoritesPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="mb-6 flex items-center gap-4">
-            <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-pink-500 p-4 shadow-lg shadow-amber-500/30">
+            <div className="rounded-2xl bg-linear-to-br from-amber-500 to-pink-500 p-4 shadow-lg shadow-amber-500/30">
               <Star className="h-7 w-7 fill-white text-white" />
             </div>
             <div>
@@ -297,7 +297,7 @@ export default function FavoritesPage() {
             animate={{ opacity: 1, y: 0 }}
             className="py-16 text-center"
           >
-            <div className="mb-6 inline-flex rounded-2xl bg-gradient-to-br from-amber-500/20 to-pink-500/20 p-8">
+            <div className="mb-6 inline-flex rounded-2xl bg-linear-to-br from-amber-500/20 to-pink-500/20 p-8">
               <Sparkles className="h-16 w-16 text-amber-400" />
             </div>
             <h3 className="mb-3 text-2xl font-semibold text-white">
@@ -311,7 +311,7 @@ export default function FavoritesPage() {
             {!searchQuery && (
               <Button
                 onClick={() => router.push('/dashboard')}
-                className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+                className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
               >
                 Browse Documents
               </Button>
@@ -343,7 +343,7 @@ export default function FavoritesPage() {
                       }}
                     />
                   ) : (
-                    <div className="flex h-32 items-center justify-center bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20">
+                    <div className="flex h-32 items-center justify-center bg-linear-to-br from-purple-500/20 to-fuchsia-500/20">
                       {favorite.document.emoji ? (
                         <span className="text-5xl">{favorite.document.emoji}</span>
                       ) : (

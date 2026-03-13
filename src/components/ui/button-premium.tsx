@@ -11,14 +11,14 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-premium-md hover:shadow-premium-lg hover:scale-[1.02] active:scale-[0.98]',
+          'bg-linear-to-br from-primary-500 to-primary-600 text-white shadow-premium-md hover:shadow-premium-lg hover:scale-[1.02] active:scale-[0.98]',
         secondary:
           'bg-surface-white border border-base-300 text-text-secondary shadow-premium-sm hover:shadow-premium-md hover:border-primary-300 hover:text-primary-600',
         ghost: 'text-text-secondary hover:bg-base-100 hover:text-text-primary',
         success:
-          'bg-gradient-to-br from-success-500 to-success-600 text-white shadow-premium-md hover:shadow-premium-lg',
+          'bg-linear-to-br from-success-500 to-success-600 text-white shadow-premium-md hover:shadow-premium-lg',
         danger:
-          'bg-gradient-to-br from-danger-500 to-danger-600 text-white shadow-premium-md hover:shadow-premium-lg',
+          'bg-linear-to-br from-danger-500 to-danger-600 text-white shadow-premium-md hover:shadow-premium-lg',
         link: 'text-primary-600 underline-offset-4 hover:underline',
         glass:
           'bg-white/70 backdrop-blur-glass border border-white/20 text-text-primary shadow-premium-md hover:shadow-premium-lg',

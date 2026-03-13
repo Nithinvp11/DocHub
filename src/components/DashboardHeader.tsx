@@ -30,12 +30,12 @@ export function DashboardHeader({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200 }}
-              className="rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-3 shadow-2xl shadow-purple-500/40"
+              className="rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-3 shadow-2xl shadow-purple-500/40"
             >
               <Sparkles className="h-6 w-6 text-white" />
             </motion.div>
             <div>
-              <h1 className="bg-gradient-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
+              <h1 className="bg-linear-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
                 Welcome back!
               </h1>
             </div>
@@ -67,10 +67,10 @@ export function DashboardHeader({
         <motion.div
           whileHover={{ y: -3 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className="group relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/20"
+          className="group relative overflow-hidden rounded-2xl border border-purple-500/20 bg-linear-to-br from-purple-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/20"
         >
           {/* Subtle gradient line at top */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50" />
+          <div className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-purple-500 to-transparent opacity-50" />
 
           <div className="relative flex items-start justify-between">
             <div className="flex-1">
@@ -95,10 +95,10 @@ export function DashboardHeader({
         <motion.div
           whileHover={{ y: -3 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className="group relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-blue-500/40 hover:shadow-xl hover:shadow-blue-500/20"
+          className="group relative overflow-hidden rounded-2xl border border-blue-500/20 bg-linear-to-br from-blue-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-blue-500/40 hover:shadow-xl hover:shadow-blue-500/20"
         >
           {/* Subtle gradient line at top */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
+          <div className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-blue-500 to-transparent opacity-50" />
 
           <div className="relative flex items-start justify-between">
             <div className="flex-1">
@@ -123,10 +123,10 @@ export function DashboardHeader({
         <motion.div
           whileHover={{ y: -3 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/20"
+          className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-linear-to-br from-emerald-500/10 via-slate-900/50 to-slate-900/90 p-6 backdrop-blur-xl transition-all hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/20"
         >
           {/* Subtle gradient line at top */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50" />
+          <div className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-emerald-500 to-transparent opacity-50" />
 
           <div className="relative flex items-start justify-between">
             <div className="flex-1">

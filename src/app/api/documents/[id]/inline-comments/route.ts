@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { z } from 'zod';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
@@ -184,17 +185,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     // Create activity log
-    await prisma.activity.create({
-      data: {
-        workspaceId: document.workspaceId,
-        actorId: user.id,
-        type: 'COMMENT_ADDED',
-        entityType: 'InlineComment',
-        entityId: comment.id,
-        metadata: {
-          commentId: comment.id,
-          documentTitle: document.title,
-        },
+    await ActivityTracker.create({
+      workspaceId: document.workspaceId,
+      actorId: user.id,
+      type: 'COMMENT_ADDED',
+      entityType: 'InlineComment',
+      entityId: comment.id,
+      metadata: {
+        commentId: comment.id,
+        documentTitle: document.title,
       },
     });
 

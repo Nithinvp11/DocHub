@@ -79,6 +79,18 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      if (user.id) {
+        try {
+          await prisma.loginEvent.create({
+            data: {
+              userId: user.id,
+            },
+          });
+        } catch (error) {
+          console.error('Error recording login event:', error);
+        }
+      }
+
       // Check if this is a GitHub OAuth callback for account linking
       if (account?.provider === 'github' && profile) {
         try {
@@ -167,10 +179,16 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
+      }
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
+      if ('picture' in token) {
+        delete token.picture;
       }
       if (account?.provider === 'github' && account.access_token) {
         // Store or update GitHub access token
@@ -222,8 +240,44 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string | null;
+        const userId = (token.id || token.sub) as string;
+        session.user.id = userId;
+
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        try {
+          const existingLoginToday = await prisma.loginEvent.findFirst({
+            where: {
+              userId,
+              createdAt: { gte: startOfToday },
+            },
+            select: { id: true },
+          });
+
+          if (!existingLoginToday) {
+            await prisma.loginEvent.create({
+              data: { userId },
+            });
+          }
+        } catch (error) {
+          console.error('Error syncing daily login event from session callback:', error);
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            name: true,
+            email: true,
+            image: true,
+            username: true,
+          },
+        });
+
+        session.user.name = user?.name ?? session.user.name;
+        session.user.email = user?.email ?? session.user.email;
+        session.user.image = user?.image ?? null;
+        session.user.username = user?.username ?? (token.username as string | null);
       }
       return session;
     },

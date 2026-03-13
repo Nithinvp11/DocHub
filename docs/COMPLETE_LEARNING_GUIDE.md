@@ -902,7 +902,7 @@ export default async function ProtectedPage() {
 - Email/password authentication with bcrypt
 - GitHub OAuth integration
 - Session stored in database (Prisma adapter)
-- Role-based access control (USER, ADMIN)
+- Permission-based access control (capability checks)
 
 ---
 

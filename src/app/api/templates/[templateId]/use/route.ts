@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
@@ -67,17 +68,16 @@ export async function POST(
     });
 
     // Create activity
-    await prisma.activity.create({
-      data: {
-        type: 'DOCUMENT_CREATED',
-        actorId: user.id,
-        workspaceId,
-        entityType: 'Document',
-        entityId: document.id,
-        metadata: {
-          templateId: template.id,
-          templateTitle: template.title,
-        },
+    await ActivityTracker.create({
+      type: 'DOCUMENT_CREATED',
+      actorId: user.id,
+      workspaceId,
+      entityType: 'Document',
+      entityId: document.id,
+      metadata: {
+        title: document.title,
+        templateId: template.id,
+        templateTitle: template.title,
       },
     });
 

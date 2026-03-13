@@ -213,6 +213,48 @@
   margin-top: 0.8em;
   margin-bottom: 0.4em;
   line-height: 1.3;
+
+  /* Document editor fullscreen mode */
+  body.document-editing-mode [data-document-navbar='true'],
+  body.document-editing-mode [data-document-sidebar='true'] {
+    display: none !important;
+  }
+
+  /* Enhanced code block UX */
+  .ProseMirror pre.code-block-lowlight,
+  .ProseMirror pre .code-block-lowlight {
+    counter-reset: line;
+  }
+
+  .ProseMirror pre.code-block-lowlight code,
+  .ProseMirror pre .code-block-lowlight code {
+    display: block;
+  }
+
+  .ProseMirror pre.code-block-lowlight code .line,
+  .ProseMirror pre .code-block-lowlight code .line {
+    display: block;
+    padding-left: 2.75rem;
+    position: relative;
+  }
+
+  .ProseMirror pre.code-block-lowlight code .line::before,
+  .ProseMirror pre .code-block-lowlight code .line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 2rem;
+    text-align: right;
+    color: rgb(148 163 184 / 70%);
+    font-size: 0.75rem;
+  }
+
+  .ProseMirror pre.code-block-lowlight code .line.highlight,
+  .ProseMirror pre .code-block-lowlight code .line.highlight {
+    background: rgb(168 85 247 / 15%);
+    border-left: 2px solid rgb(192 132 252 / 70%);
+  }
 }
 
 .ProseMirror h3 {

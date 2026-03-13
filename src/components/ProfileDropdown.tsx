@@ -35,7 +35,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
       >
         <Avatar className="h-8 w-8 ring-2 ring-purple-500/20 transition-all group-hover:ring-purple-500/40">
           <AvatarImage src={user.image || undefined} alt={displayName} />
-          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-fuchsia-600 text-xs font-semibold text-white">
+          <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-xs font-semibold text-white">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -67,11 +67,11 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
             >
               <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-2xl shadow-purple-500/20 backdrop-blur-2xl">
                 {/* User Info Header */}
-                <div className="border-b border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-4">
+                <div className="border-b border-white/10 bg-linear-to-br from-slate-800/50 to-slate-900/50 p-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 ring-2 ring-purple-500/30">
                       <AvatarImage src={user.image || undefined} alt={displayName} />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-600 to-fuchsia-600 text-sm font-semibold text-white">
+                      <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-sm font-semibold text-white">
                         {initials}
                       </AvatarFallback>
                     </Avatar>

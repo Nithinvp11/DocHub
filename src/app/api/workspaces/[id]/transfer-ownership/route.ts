@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
 import {
@@ -134,22 +135,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
 
       // Log the activity
-      await tx.activity.create({
-        data: {
-          type: 'OWNERSHIP_TRANSFERRED',
-          actorId: user.id,
-          workspaceId: id,
-          entityType: 'workspace',
-          entityId: id,
-          metadata: {
-            previousOwnerId: user.id,
-            previousOwnerName: workspace.owner.name,
-            previousOwnerEmail: workspace.owner.email,
-            newOwnerId: newOwnerId,
-            newOwnerName: newOwner.name,
-            newOwnerEmail: newOwner.email,
-            transferredAt: new Date().toISOString(),
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'OWNERSHIP_TRANSFERRED',
+        actorId: user.id,
+        workspaceId: id,
+        entityType: 'workspace',
+        entityId: id,
+        metadata: {
+          previousOwnerId: user.id,
+          previousOwnerName: workspace.owner.name,
+          previousOwnerEmail: workspace.owner.email,
+          newOwnerId: newOwnerId,
+          newOwnerName: newOwner.name,
+          newOwnerEmail: newOwner.email,
+          transferredAt: new Date().toISOString(),
         },
       });
 

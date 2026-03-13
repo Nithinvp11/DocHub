@@ -3,8 +3,6 @@
  * Consistent typography system throughout the app
  */
 
-import { designSystem } from './design-system';
-
 export const typography = {
   // Headings
   h1: 'scroll-m-20 text-4xl font-bold tracking-tight lg:text-5xl',

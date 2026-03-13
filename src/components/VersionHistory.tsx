@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,16 +50,6 @@ interface VersionHistoryProps {
 }
 
 type VersionStatus = 'current' | 'restored' | 'imported' | 'autosave' | 'saved' | 'initial';
-
-function buildVersionCode(version: Version): string {
-  if (version.sha) {
-    return `#${version.sha.slice(0, 4).toUpperCase()}`;
-  }
-
-  const stamp = new Date(version.createdAt).getTime().toString(36).slice(-4).toUpperCase();
-  const orderCode = (version.version % 36).toString(36).toUpperCase();
-  return `#${stamp}${orderCode}`;
-}
 
 function getVersionStatus(version: Version, isCurrent: boolean): VersionStatus {
   const message = version.message.toLowerCase();
@@ -114,7 +104,7 @@ function formatVersionDate(dateString: string): string {
 export function VersionHistory({ versions, documentId, onRestore }: VersionHistoryProps) {
   const router = useRouter();
 
-  const [activeVersionId, setActiveVersionId] = useState<string | null>(versions[0]?.id ?? null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [versionToView, setVersionToView] = useState<Version | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
@@ -128,10 +118,23 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
   const [versionToLabel, setVersionToLabel] = useState<Version | null>(null);
   const [labelInput, setLabelInput] = useState('');
 
-  const sortedVersions = useMemo(
-    () => [...versions].sort((a, b) => b.version - a.version),
-    [versions]
-  );
+  const sortedVersions = useMemo(() => {
+    return [...versions]
+      .filter((version) => !version.isAutoSave && !version.isDraft)
+      .sort((a, b) => b.version - a.version);
+  }, [versions]);
+
+  useEffect(() => {
+    if (sortedVersions.length === 0) {
+      setActiveVersionId(null);
+      return;
+    }
+
+    const hasActive = sortedVersions.some((version) => version.id === activeVersionId);
+    if (!hasActive) {
+      setActiveVersionId(sortedVersions[0].id);
+    }
+  }, [sortedVersions, activeVersionId]);
 
   const handleRestore = async (version: Version) => {
     try {
@@ -235,30 +238,35 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 shadow-sm">
+    <div className="space-y-4 p-4">
+      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 shadow-sm">
           <Clock className="h-4 w-4 text-purple-300" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-bold text-white">Version History</h3>
           <p className="text-xs text-slate-400">{sortedVersions.length} versions</p>
         </div>
       </div>
 
-      <div className="max-h-[470px] space-y-2 overflow-y-auto pr-1">
+      <div className="max-h-[470px] space-y-3 overflow-y-auto pr-1">
+        {sortedVersions.length === 0 && (
+          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 text-center text-sm text-slate-400">
+            No saved versions yet.
+          </div>
+        )}
+
         {sortedVersions.map((version, index) => {
           const isCurrent = index === 0;
           const isActive = activeVersionId === version.id;
           const status = getVersionStatus(version, isCurrent);
-          const versionCode = buildVersionCode(version);
           const displayName = getVersionName(status);
           const displayAuthor = version.author.name || version.author.email.split('@')[0];
 
           return (
             <div
               key={version.id}
-              className={`group rounded-xl border p-3 transition-all ${
+              className={`group rounded-2xl border p-4 transition-all ${
                 isActive
                   ? 'border-purple-400/50 bg-purple-500/10 shadow-md shadow-purple-500/10'
                   : 'border-white/10 bg-slate-900/50 hover:border-purple-500/35 hover:bg-slate-900/70 hover:shadow-md hover:shadow-purple-500/10'
@@ -266,7 +274,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
               onClick={() => setActiveVersionId(version.id)}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-sm font-semibold text-white">{displayName}</span>
                     <Badge
@@ -292,14 +300,12 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                    <span className="font-medium text-slate-300">{versionCode}</span>
-                    <span>•</span>
                     <span className="tracking-wide text-slate-500 uppercase">
                       v{version.version}
                     </span>
                   </div>
 
-                  <p className="line-clamp-1 text-xs text-slate-300">
+                  <p className="line-clamp-2 text-xs leading-relaxed text-slate-300">
                     {version.message || 'No message'}
                   </p>
 
@@ -315,7 +321,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 shrink-0 border border-white/10 bg-slate-900/70 text-slate-200 opacity-80 transition-all group-hover:opacity-100 hover:border-purple-400/60 hover:bg-slate-800/90 hover:text-white hover:shadow-sm hover:shadow-purple-500/25"
+                      className="mt-0.5 h-8 w-8 shrink-0 rounded-xl border border-white/10 bg-slate-900/70 text-slate-200 opacity-80 transition-all group-hover:opacity-100 hover:border-purple-400/60 hover:bg-slate-800/90 hover:text-white hover:shadow-sm hover:shadow-purple-500/25"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -338,17 +344,6 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
                     >
                       <Eye className="mr-2 h-4 w-4" />
                       View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setVersionToRestore(version);
-                        setShowRestoreDialog(true);
-                      }}
-                      className="text-slate-200 hover:bg-white/10 focus:bg-white/10 focus:text-white"
-                    >
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      Restore
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -380,6 +375,17 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
+                            setVersionToRestore(version);
+                            setShowRestoreDialog(true);
+                          }}
+                          className="text-slate-200 hover:bg-white/10 focus:bg-white/10 focus:text-white"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Restore
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setVersionToDelete(version);
                             setShowDeleteDialog(true);
                           }}
@@ -402,9 +408,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
         <DialogContent className="max-h-[80vh] max-w-4xl border border-white/10 bg-slate-900/95 text-white shadow-2xl shadow-purple-900/30 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-white">
-              {versionToView
-                ? `${getVersionName(getVersionStatus(versionToView, false))} ${buildVersionCode(versionToView)}`
-                : 'Version'}
+              {versionToView ? getVersionName(getVersionStatus(versionToView, false)) : 'Version'}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               {versionToView?.message || 'No message'} •{' '}
@@ -444,7 +448,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
             </Button>
             <Button
               onClick={() => versionToRestore && handleRestore(versionToRestore)}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               Restore
             </Button>
@@ -506,7 +510,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
             <Button
               onClick={handleRenameVersion}
               disabled={!renameInput.trim()}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               Save
             </Button>
@@ -546,7 +550,7 @@ export function VersionHistory({ versions, documentId, onRestore }: VersionHisto
             <Button
               onClick={handleUpdateLabel}
               disabled={!labelInput.trim()}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               Save Label
             </Button>

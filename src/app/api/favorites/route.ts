@@ -111,7 +111,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    if (document.workspace.members.length === 0) {
+    const isOwner = document.workspace.ownerId === user.id;
+
+    if (!isOwner && document.workspace.members.length === 0) {
       return NextResponse.json(
         { error: 'You do not have access to this document' },
         { status: 403 }

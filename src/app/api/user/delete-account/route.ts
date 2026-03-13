@@ -1,10 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
+import { decryptToken } from '@/lib/encryption';
 import bcrypt from 'bcryptjs';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { unlink, readdir, rmdir } from 'fs/promises';
+
+function getGitHubOAuthCredentials(): { clientId: string; clientSecret: string } | null {
+  const clientId = process.env.GITHUB_ID || process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_SECRET || process.env.GITHUB_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  return { clientId, clientSecret };
+}
+
+async function revokeGitHubOAuthGrant(accessToken: string): Promise<void> {
+  const credentials = getGitHubOAuthCredentials();
+  if (!credentials) {
+    console.warn('[Delete Account] Skipping GitHub token revocation (OAuth credentials missing)');
+    return;
+  }
+
+  const basicAuth = Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString(
+    'base64'
+  );
+
+  const response = await fetch(
+    `https://api.github.com/applications/${credentials.clientId}/grant`,
+    {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Basic ${basicAuth}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'DocHub',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({ access_token: accessToken }),
+    }
+  );
+
+  // 204: revoked, 404/422: already invalid or already revoked
+  if (response.status === 204 || response.status === 404 || response.status === 422) {
+    return;
+  }
+
+  const errorBody = await response.text();
+  throw new Error(`GitHub revoke failed (${response.status}): ${errorBody}`);
+}
 
 /**
  * Recursively delete a directory and all its contents
@@ -44,7 +91,7 @@ async function deleteDirectory(dirPath: string): Promise<void> {
  * - Documents authored by user
  * - Comments, activities, notifications
  * - GitHub tokens and integrations
- * - Uploaded files from disk
+ * - Uploaded workspace files from disk
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -61,6 +108,17 @@ export async function DELETE(req: NextRequest) {
         id: true,
         email: true,
         password: true,
+        accounts: {
+          where: { provider: 'github' },
+          select: {
+            access_token: true,
+          },
+        },
+        githubAuth: {
+          select: {
+            accessToken: true,
+          },
+        },
         ownedWorkspaces: {
           select: { id: true, name: true },
         },
@@ -113,13 +171,43 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // Step 3: Delete user avatar/profile images
-    const userUploadDir = join(process.cwd(), 'public', 'uploads', 'users', session.user.id);
-    if (existsSync(userUploadDir)) {
-      await deleteDirectory(userUploadDir);
+    // Step 2.5: Revoke GitHub OAuth grants before removing local auth records
+    const githubTokens = new Set<string>();
+
+    for (const account of user.accounts) {
+      if (account.access_token) {
+        githubTokens.add(decryptToken(account.access_token));
+      }
     }
 
-    // Step 4: Delete database records in proper order
+    for (const auth of user.githubAuth) {
+      if (auth.accessToken) {
+        githubTokens.add(decryptToken(auth.accessToken));
+      }
+    }
+
+    if (githubTokens.size > 0) {
+      console.log(`[Delete Account] Revoking ${githubTokens.size} GitHub OAuth grant(s)...`);
+      const revokeResults = await Promise.allSettled(
+        Array.from(githubTokens).map((token) => revokeGitHubOAuthGrant(token))
+      );
+
+      const failedRevocations = revokeResults.filter((result) => result.status === 'rejected');
+      if (failedRevocations.length > 0) {
+        console.warn(
+          `[Delete Account] ${failedRevocations.length} GitHub grant revocation(s) failed; continuing account deletion.`
+        );
+        failedRevocations.forEach((result) => {
+          if (result.status === 'rejected') {
+            console.warn('[Delete Account] GitHub revoke error:', result.reason);
+          }
+        });
+      } else {
+        console.log('[Delete Account] GitHub OAuth grants revoked successfully');
+      }
+    }
+
+    // Step 3: Delete database records in proper order
     console.log('[Delete Account] Deleting database records...');
 
     // Delete owned workspaces (cascade will handle most relations)
@@ -186,7 +274,7 @@ export async function DELETE(req: NextRequest) {
     });
     console.log('[Delete Account] Deleted feedback');
 
-    // Step 5: Finally delete the user (cascade will handle remaining relations)
+    // Step 4: Finally delete the user (cascade will handle remaining relations)
     await prisma.user.delete({
       where: { id: session.user.id },
     });

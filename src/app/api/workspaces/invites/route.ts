@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/session';
 
 // GET list user's pending invitations
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {

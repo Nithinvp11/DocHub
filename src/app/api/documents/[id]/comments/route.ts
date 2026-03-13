@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
-import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
-import { sanitizeMarkdown } from '@/lib/sanitize';
 import { PAGINATION_LIMITS } from '@/lib/constants';
 import { ActivityTracker } from '@/lib/activity';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
@@ -11,6 +9,7 @@ import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-perm
 
 const commentSchema = z.object({
   content: z.string().min(1),
+  mentionedUserIds: z.array(z.string()).optional().default([]),
 });
 
 const resolveCommentSchema = z.object({
@@ -86,7 +85,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Get document to access workspace
     const document = await prisma.document.findUnique({
       where: { id },
-      select: { workspaceId: true },
+      select: {
+        workspaceId: true,
+        title: true,
+        author: { select: { name: true, email: true } },
+      },
     });
 
     if (!document) {
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await assertPermission(user.id, document.workspaceId, WORKSPACE_PERMISSION.COMMENTS_CREATE);
 
     const body = await req.json();
-    const { content } = commentSchema.parse(body);
+    const { content, mentionedUserIds } = commentSchema.parse(body);
 
     const comment = await prisma.comment.create({
       data: {
@@ -119,6 +122,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Track comment activity
     await ActivityTracker.trackCommentAdded(comment.id, id, user.id, document.workspaceId);
+
+    // Create mention notifications for each mentioned user (skip the commenter themselves)
+    if (mentionedUserIds && mentionedUserIds.length > 0) {
+      const authorName = user.name ?? user.email ?? 'Someone';
+      const docTitle = document.title ?? 'a document';
+      const snippet = content.length > 100 ? content.slice(0, 100) + '…' : content;
+      const link = `/dashboard/${document.workspaceId}/documents/${id}`;
+
+      await prisma.notification.createMany({
+        data: mentionedUserIds
+          .filter((uid: string) => uid !== user.id)
+          .map((uid: string) => ({
+            userId: uid,
+            type: 'COMMENT_MENTION' as const,
+            title: `${authorName} mentioned you`,
+            message: `In "${docTitle}": ${snippet}`,
+            link,
+          })),
+        skipDuplicates: true,
+      });
+    }
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

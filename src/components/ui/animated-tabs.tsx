@@ -40,13 +40,13 @@ export function AnimatedTabs({ tabs, activeTab, onChange, className }: AnimatedT
   return (
     <div
       className={cn(
-        'relative inline-flex items-center rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 p-1.5 backdrop-blur-xl',
+        'relative inline-flex items-center rounded-2xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 p-1.5 backdrop-blur-xl',
         className
       )}
     >
       {/* Animated pill indicator */}
       <motion.div
-        className="absolute top-[6px] h-[calc(100%-12px)] rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 shadow-lg shadow-purple-500/30"
+        className="absolute top-[6px] h-[calc(100%-12px)] rounded-xl bg-linear-to-r from-purple-600 to-fuchsia-600 shadow-lg shadow-purple-500/30"
         initial={false}
         animate={{
           left: indicatorStyle.left,

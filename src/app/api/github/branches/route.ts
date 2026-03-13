@@ -2,15 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { Octokit } from '@octokit/rest';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { decryptToken } from '@/lib/encryption';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
-
-const listBranchesSchema = z.object({
-  workspaceId: z.string(),
-  githubRepository: z.string(),
-});
 
 const switchBranchSchema = z.object({
   documentId: z.string(),
@@ -183,7 +179,7 @@ async function switchBranch(data: BranchData, userId: string) {
       repo,
       branch,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
   }
 
@@ -198,18 +194,17 @@ async function switchBranch(data: BranchData, userId: string) {
   });
 
   // Create activity
-  await prisma.activity.create({
-    data: {
-      type: 'GITHUB_REPO_SYNCED',
-      actorId: userId,
-      workspaceId,
-      entityType: 'Document',
-      entityId: documentId,
-      metadata: {
-        action: 'branch_switched',
-        branch,
-        repository: document.syncInfo.githubRepository,
-      },
+  await ActivityTracker.create({
+    type: 'GITHUB_REPO_SYNCED',
+    actorId: userId,
+    workspaceId,
+    entityType: 'Document',
+    entityId: documentId,
+    metadata: {
+      action: 'branch_switched',
+      branch,
+      repository: document.syncInfo.githubRepository,
+      repoName: document.syncInfo.githubRepository,
     },
   });
 
@@ -274,19 +269,18 @@ async function createBranch(data: BranchData, userId: string) {
   });
 
   // Create activity
-  await prisma.activity.create({
-    data: {
-      type: 'GITHUB_REPO_SYNCED',
-      actorId: userId,
-      workspaceId,
-      entityType: 'Document',
-      entityId: documentId,
-      metadata: {
-        action: 'branch_created',
-        newBranch,
-        fromBranch,
-        repository: document.syncInfo.githubRepository,
-      },
+  await ActivityTracker.create({
+    type: 'GITHUB_REPO_SYNCED',
+    actorId: userId,
+    workspaceId,
+    entityType: 'Document',
+    entityId: documentId,
+    metadata: {
+      action: 'branch_created',
+      newBranch,
+      fromBranch,
+      repository: document.syncInfo.githubRepository,
+      repoName: document.syncInfo.githubRepository,
     },
   });
 

@@ -8,6 +8,7 @@ import {
   markdownToHtml,
   createGitHubClient,
 } from '@/lib/github';
+import { deriveTitleFromMarkdownPath } from '@/lib/github-path-utils';
 import { z } from 'zod';
 import { ActivityTracker } from '@/lib/activity';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
@@ -22,6 +23,18 @@ const batchImportSchema = z.object({
   linkToGitHub: z.boolean().default(true),
   autoSync: z.boolean().default(false),
 });
+
+function stripDocsPrefix(path: string): string {
+  const normalized = path.replace(/^\/+/, '');
+  return normalized.startsWith('docs/') ? normalized.slice(5) : normalized;
+}
+
+function githubPathToDocumentPath(path: string): string {
+  return `/${path
+    .replace(/\.(md|mdx)$/i, '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')}`;
+}
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -100,12 +113,15 @@ export async function POST(req: NextRequest) {
     for (const file of filesToImport) {
       if (!file.path) continue;
 
+      const relativeGitHubPath = stripDocsPrefix(file.path);
+      const documentPath = githubPathToDocumentPath(relativeGitHubPath);
+
       try {
         // Check if document already exists
         const existingDoc = await prisma.document.findFirst({
           where: {
             workspaceId: data.workspaceId,
-            path: file.path,
+            OR: [{ path: documentPath }, { githubPath: relativeGitHubPath }],
           },
         });
 
@@ -131,23 +147,21 @@ export async function POST(req: NextRequest) {
         // Convert to HTML
         const htmlContent = markdownToHtml(fileData.content);
 
-        // Generate title from path
-        const title =
-          file.path
-            .split('/')
-            .pop()
-            ?.replace(/\.mdx?$/, '') || 'Untitled';
+        // Keep title aligned with markdown filename.
+        const title = deriveTitleFromMarkdownPath(file.path);
 
         // Create document
         const document = await prisma.document.create({
           data: {
             title,
             content: htmlContent,
-            path: file.path,
+            path: documentPath,
             workspaceId: data.workspaceId,
             authorId: user.id,
             type: 'GENERAL',
             status: 'PUBLISHED',
+            githubPath: relativeGitHubPath,
+            githubSha: fileData.sha,
           },
         });
 
@@ -207,7 +221,7 @@ export async function POST(req: NextRequest) {
         importedDocuments.push({
           id: document.id,
           title: document.title,
-          path: file.path,
+          path: document.path,
         });
       } catch (error) {
         errors.push({
@@ -218,19 +232,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Create activity
-    await prisma.activity.create({
-      data: {
-        type: 'GITHUB_REPO_SYNCED',
-        actorId: user.id,
-        workspaceId: data.workspaceId,
-        entityType: 'GitHubRepo',
-        entityId: data.githubRepository,
-        metadata: {
-          repository: data.githubRepository,
-          branch: data.githubBranch,
-          importedCount: importedDocuments.length,
-          errorCount: errors.length,
-        },
+    await ActivityTracker.create({
+      type: 'GITHUB_REPO_SYNCED',
+      actorId: user.id,
+      workspaceId: data.workspaceId,
+      entityType: 'GitHubRepo',
+      entityId: data.githubRepository,
+      metadata: {
+        repository: data.githubRepository,
+        repoName: data.githubRepository,
+        branch: data.githubBranch,
+        importedCount: importedDocuments.length,
+        errorCount: errors.length,
       },
     });
 

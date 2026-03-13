@@ -5,7 +5,13 @@ import { z } from 'zod';
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  image: z.string().url().optional(),
+  image: z
+    .string()
+    .refine(
+      (value) => value.startsWith('data:image/') || z.string().url().safeParse(value).success,
+      'Image must be a valid URL or data URL'
+    )
+    .optional(),
 });
 
 // GET /api/user/profile - Get current user profile

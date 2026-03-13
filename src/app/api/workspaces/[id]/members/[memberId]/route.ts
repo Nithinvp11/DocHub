@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
@@ -106,22 +107,22 @@ export async function PATCH(
       },
     });
 
-    await prisma.activity.create({
-      data: {
-        type: 'MEMBER_ADDED',
-        actorId: user.id,
-        workspaceId: id,
-        entityType: 'workspace_member',
-        entityId: memberId,
-        metadata: {
-          action: 'permissions_updated',
-          memberUserId: targetMember.userId,
-          memberGrantedById: targetMember.grantedById,
-          memberGrantRootId: targetMember.grantRootId,
-          memberGrantDepth: targetMember.grantDepth,
-          beforePermissions: targetMember.permissions,
-          afterPermissions: normalizedPermissions,
-        },
+    await ActivityTracker.create({
+      type: 'MEMBER_ADDED',
+      actorId: user.id,
+      workspaceId: id,
+      entityType: 'workspace_member',
+      entityId: memberId,
+      metadata: {
+        action: 'permissions_updated',
+        memberUserId: targetMember.userId,
+        memberUserName: updatedMember.user.name,
+        memberUserEmail: updatedMember.user.email,
+        memberGrantedById: targetMember.grantedById,
+        memberGrantRootId: targetMember.grantRootId,
+        memberGrantDepth: targetMember.grantDepth,
+        beforePermissions: targetMember.permissions,
+        afterPermissions: normalizedPermissions,
       },
     });
 
@@ -294,27 +295,25 @@ export async function DELETE(
       });
 
       // Log the activity
-      await tx.activity.create({
-        data: {
-          type: 'MEMBER_REMOVED',
-          actorId: user.id,
-          workspaceId: id,
-          entityType: 'workspace_member',
-          entityId: memberId,
-          metadata: {
-            removedUserId: targetMember.userId,
-            removedUserName: targetUser?.name,
-            removedUserEmail: targetUser?.email,
-            removedUserGrantedById: targetMember.grantedById,
-            removedUserGrantRootId: targetMember.grantRootId,
-            removedUserGrantDepth: targetMember.grantDepth,
-            cascadeRemoval: isOwner && delegatedMembersCount > 0,
-            removedMemberCount: memberIdsToRemoveList.length,
-            removedDelegatedMemberCount: delegatedMembersCount,
-            removedMemberIds: memberIdsToRemoveList,
-            removedUserIds: userIdsToRemoveList,
-            cancelledPendingInviteCount: cancelledInvites.count,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'MEMBER_REMOVED',
+        actorId: user.id,
+        workspaceId: id,
+        entityType: 'workspace_member',
+        entityId: memberId,
+        metadata: {
+          removedUserId: targetMember.userId,
+          removedUserName: targetUser?.name,
+          removedUserEmail: targetUser?.email,
+          removedUserGrantedById: targetMember.grantedById,
+          removedUserGrantRootId: targetMember.grantRootId,
+          removedUserGrantDepth: targetMember.grantDepth,
+          cascadeRemoval: isOwner && delegatedMembersCount > 0,
+          removedMemberCount: memberIdsToRemoveList.length,
+          removedDelegatedMemberCount: delegatedMembersCount,
+          removedMemberIds: memberIdsToRemoveList,
+          removedUserIds: userIdsToRemoveList,
+          cancelledPendingInviteCount: cancelledInvites.count,
         },
       });
 

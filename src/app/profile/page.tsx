@@ -19,6 +19,9 @@ import {
   Link as LinkIcon,
   CheckCircle2,
   Shield,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -52,7 +55,8 @@ export default function ProfilePage() {
 
   // Profile picture modal
   const [showImageModal, setShowImageModal] = useState(false);
-  const [tempImageUrl, setTempImageUrl] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState('');
 
   // GitHub linking
   const [linkingGithub, setLinkingGithub] = useState(false);
@@ -69,6 +73,14 @@ export default function ProfilePage() {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (selectedImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
+    };
+  }, [selectedImagePreview]);
+
   const fetchProfile = async () => {
     try {
       const profileRes = await fetch('/api/user/profile');
@@ -77,6 +89,8 @@ export default function ProfilePage() {
         setProfile(profileData);
         setProfileName(profileData.name || '');
         setProfileImage(profileData.image || '');
+        setSelectedImagePreview('');
+        setSelectedImageFile(null);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -147,13 +161,21 @@ export default function ProfilePage() {
 
   const handleImageUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedImageFile) {
+      toast.error('Please select an image file');
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: tempImageUrl }),
+      const formData = new FormData();
+      formData.append('file', selectedImageFile);
+
+      const res = await fetch('/api/user/profile/image', {
+        method: 'POST',
+        body: formData,
       });
 
       if (!res.ok) {
@@ -161,17 +183,75 @@ export default function ProfilePage() {
         toast.error(error.error || 'Failed to update profile picture');
         return;
       }
-
+      const updatedProfile = await res.json();
       toast.success('Profile picture updated successfully');
       setShowImageModal(false);
-      setProfileImage(tempImageUrl);
-      setTempImageUrl('');
-      fetchProfile();
+      setProfile(updatedProfile);
+      setProfileImage(updatedProfile.image || '');
+      setSelectedImageFile(null);
+      setSelectedImagePreview('');
     } catch (error) {
       toast.error('Failed to update profile picture');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!profileImage) {
+      toast.error('No profile picture to remove');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/user/profile/image', {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to remove profile picture');
+        return;
+      }
+
+      const updatedProfile = await res.json();
+      setProfile(updatedProfile);
+      setProfileImage('');
+      setSelectedImageFile(null);
+      setSelectedImagePreview('');
+      setShowImageModal(false);
+      toast.success('Profile picture removed');
+    } catch (error) {
+      toast.error('Failed to remove profile picture');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSelectProfileImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    if (selectedImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+
+    setSelectedImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setSelectedImagePreview(previewUrl);
   };
 
   const handleLinkGithub = async () => {
@@ -227,13 +307,13 @@ export default function ProfilePage() {
               {/* Title with glow effect */}
               <div className="mb-4 flex items-center gap-4">
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 opacity-60 blur-xl" />
-                  <div className="relative rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-4 shadow-2xl">
+                  <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 opacity-60 blur-xl" />
+                  <div className="relative rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-4 shadow-2xl">
                     <User className="h-8 w-8 text-white" />
                   </div>
                 </div>
                 <div>
-                  <h1 className="bg-gradient-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">
+                  <h1 className="bg-linear-to-r from-white via-purple-200 to-fuchsia-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">
                     Your Profile
                   </h1>
                   <p className="mt-2 text-lg text-slate-400">
@@ -252,12 +332,12 @@ export default function ProfilePage() {
           >
             <div className="relative">
               {/* Card glow effect */}
-              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
+              <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 opacity-75 blur-2xl" />
 
               {/* Main premium glass card */}
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
                 {/* Top gradient line */}
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500 to-transparent" />
 
                 <div className="p-10">
                   {/* Profile Picture Section - Premium Design */}
@@ -270,10 +350,10 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-8">
                       <div className="group relative">
                         {/* Avatar glow */}
-                        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 opacity-0 blur-xl transition-opacity group-hover:opacity-60" />
+                        <div className="absolute -inset-2 rounded-full bg-linear-to-r from-purple-600 to-fuchsia-600 opacity-0 blur-xl transition-opacity group-hover:opacity-60" />
 
                         {/* Avatar container */}
-                        <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-white/10 bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl">
+                        <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-white/10 bg-linear-to-br from-slate-800 to-slate-900 shadow-2xl">
                           <img
                             src={
                               profileImage ||
@@ -311,12 +391,13 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setTempImageUrl(profileImage);
+                            setSelectedImageFile(null);
+                            setSelectedImagePreview(profileImage || '');
                             setShowImageModal(true);
                           }}
-                          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-r from-purple-600/10 to-fuchsia-600/10 px-6 py-3 font-semibold text-purple-300 transition-all hover:border-purple-500/50 hover:from-purple-600/20 hover:to-fuchsia-600/20 hover:shadow-lg hover:shadow-purple-500/25"
+                          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl border border-purple-500/30 bg-linear-to-r from-purple-600/10 to-fuchsia-600/10 px-6 py-3 font-semibold text-purple-300 transition-all hover:border-purple-500/50 hover:from-purple-600/20 hover:to-fuchsia-600/20 hover:shadow-lg hover:shadow-purple-500/25"
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/20 to-purple-600/0 opacity-0 transition-opacity group-hover:opacity-100" />
+                          <div className="absolute inset-0 bg-linear-to-r from-purple-600/0 via-purple-600/20 to-purple-600/0 opacity-0 transition-opacity group-hover:opacity-100" />
                           <Camera className="relative h-4 w-4" />
                           <span className="relative">Change Picture</span>
                         </button>
@@ -325,7 +406,7 @@ export default function ProfilePage() {
                   </motion.div>
 
                   {/* Divider */}
-                  <div className="mb-10 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <div className="mb-10 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
 
                   {/* Form Fields - Premium Design */}
                   <form onSubmit={handleUpdateProfile} className="space-y-8">
@@ -379,7 +460,7 @@ export default function ProfilePage() {
                               type="button"
                               onClick={handleUpdateUsername}
                               disabled={saving || !newUsername || newUsername.length < 3}
-                              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
                             >
                               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               Save Username
@@ -479,7 +560,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     {/* Divider */}
-                    <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <div className="h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
 
                     {/* Premium Save Button */}
                     <motion.div
@@ -490,10 +571,10 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={saving}
-                        className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 p-[2px] transition-all hover:shadow-2xl hover:shadow-purple-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-purple-600 to-fuchsia-600 p-0.5 transition-all hover:shadow-2xl hover:shadow-purple-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <div className="relative flex items-center justify-center gap-2 rounded-[10px] bg-gradient-to-r from-purple-600 to-fuchsia-600 px-8 py-4 font-bold text-white transition-all">
-                          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-white/25 to-purple-600/0 opacity-0 transition-opacity group-hover:opacity-100" />
+                        <div className="relative flex items-center justify-center gap-2 rounded-md bg-linear-to-r from-purple-600 to-fuchsia-600 px-8 py-4 font-bold text-white transition-all">
+                          <div className="absolute inset-0 bg-linear-to-r from-purple-600/0 via-white/25 to-purple-600/0 opacity-0 transition-opacity group-hover:opacity-100" />
                           {saving ? (
                             <>
                               <Loader2 className="relative h-5 w-5 animate-spin" />
@@ -524,17 +605,17 @@ export default function ProfilePage() {
           >
             <div className="relative">
               {/* Card glow effect */}
-              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 opacity-75 blur-2xl" />
+              <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 opacity-75 blur-2xl" />
 
               {/* Connected Accounts Card */}
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl backdrop-blur-2xl">
                 {/* Top gradient line */}
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-500 to-transparent" />
 
                 <div className="p-10">
                   <div className="mb-8">
                     <div className="mb-2 flex items-center gap-3">
-                      <div className="rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 p-3">
+                      <div className="rounded-xl bg-linear-to-br from-blue-600 to-cyan-600 p-3">
                         <Shield className="h-6 w-6 text-white" />
                       </div>
                       <h2 className="text-3xl font-bold text-white">Connected Accounts</h2>
@@ -550,11 +631,11 @@ export default function ProfilePage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 }}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 transition-all hover:border-white/20 hover:bg-gradient-to-br hover:from-slate-800/70 hover:to-slate-900/70"
+                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/50 to-slate-900/50 p-6 transition-all hover:border-white/20 hover:bg-linear-to-br hover:from-slate-800/70 hover:to-slate-900/70"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 p-3 shadow-lg">
+                          <div className="rounded-xl bg-linear-to-br from-slate-700 to-slate-800 p-3 shadow-lg">
                             <Github className="h-6 w-6 text-white" />
                           </div>
                           <div>
@@ -579,7 +660,7 @@ export default function ProfilePage() {
                               type="button"
                               onClick={handleLinkGithub}
                               disabled={linkingGithub}
-                              className="group/btn relative inline-flex items-center gap-2 overflow-hidden rounded-xl border border-slate-600/50 bg-gradient-to-r from-slate-700/50 to-slate-800/50 px-6 py-3 font-semibold text-white transition-all hover:border-slate-500 hover:from-slate-700 hover:to-slate-800 hover:shadow-lg disabled:opacity-50"
+                              className="group/btn relative inline-flex items-center gap-2 overflow-hidden rounded-xl border border-slate-600/50 bg-linear-to-r from-slate-700/50 to-slate-800/50 px-6 py-3 font-semibold text-white transition-all hover:border-slate-500 hover:from-slate-700 hover:to-slate-800 hover:shadow-lg disabled:opacity-50"
                             >
                               {linkingGithub ? (
                                 <>
@@ -603,11 +684,11 @@ export default function ProfilePage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.4 }}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6"
+                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/50 to-slate-900/50 p-6"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 shadow-lg">
+                          <div className="rounded-xl bg-linear-to-br from-blue-600 to-blue-700 p-3 shadow-lg">
                             <Mail className="h-6 w-6 text-white" />
                           </div>
                           <div>
@@ -642,7 +723,8 @@ export default function ProfilePage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
           onClick={() => {
             setShowImageModal(false);
-            setTempImageUrl('');
+            setSelectedImageFile(null);
+            setSelectedImagePreview('');
           }}
         >
           <motion.div
@@ -654,15 +736,15 @@ export default function ProfilePage() {
             className="relative w-full max-w-lg"
           >
             {/* Modal glow */}
-            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-purple-600/30 blur-2xl" />
+            <div className="absolute -inset-1 rounded-3xl bg-linear-to-r from-purple-600/30 via-fuchsia-600/30 to-purple-600/30 blur-2xl" />
 
             {/* Modal content */}
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 shadow-2xl backdrop-blur-2xl">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 shadow-2xl backdrop-blur-2xl">
+              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500 to-transparent" />
 
               <div className="p-8">
                 <div className="mb-6 flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-3">
+                  <div className="rounded-xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-3">
                     <Camera className="h-6 w-6 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-white">Update Profile Picture</h3>
@@ -670,39 +752,60 @@ export default function ProfilePage() {
 
                 <form onSubmit={handleImageUpdate} className="space-y-6">
                   <div className="space-y-3">
-                    <Label htmlFor="imageUrl" className="text-sm font-semibold text-slate-200">
-                      Image URL
+                    <Label htmlFor="imageFile" className="text-sm font-semibold text-slate-200">
+                      Choose Image
                     </Label>
-                    <Input
-                      id="imageUrl"
-                      value={tempImageUrl}
-                      onChange={(e) => setTempImageUrl(e.target.value)}
-                      placeholder="https://example.com/your-image.jpg"
-                      type="url"
-                      className="h-12 border-white/20 bg-white/5 text-base text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20"
+                    <label
+                      htmlFor="imageFile"
+                      className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/5 px-6 py-8 text-center transition-all hover:border-purple-400/50 hover:bg-white/10"
+                    >
+                      <div className="rounded-xl bg-linear-to-br from-purple-600/20 to-fuchsia-600/20 p-3 text-purple-300">
+                        <Upload className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">
+                          {selectedImageFile ? selectedImageFile.name : 'Click to select an image'}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          PNG, JPG, GIF, or WebP up to 5MB
+                        </p>
+                      </div>
+                    </label>
+                    <input
+                      id="imageFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSelectProfileImage}
+                      className="hidden"
                     />
                     <p className="text-sm text-slate-400">
-                      Enter a valid image URL or leave empty for auto-generated avatar
+                      Select an image file from your device to use as your profile picture.
                     </p>
                   </div>
 
-                  {tempImageUrl && (
+                  {(selectedImagePreview || profileImage) && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex justify-center"
                     >
                       <div className="relative">
-                        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 opacity-50 blur-xl" />
-                        <img
-                          src={tempImageUrl}
-                          alt="Preview"
-                          className="relative h-40 w-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://ui-avatars.com/api/?name=Invalid&background=ef4444&color=fff&size=256';
-                          }}
-                        />
+                        <div className="absolute -inset-2 rounded-full bg-linear-to-r from-purple-600 to-fuchsia-600 opacity-50 blur-xl" />
+                        {selectedImagePreview || profileImage ? (
+                          <img
+                            src={selectedImagePreview || profileImage}
+                            alt="Preview"
+                            className="relative h-40 w-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                'https://ui-avatars.com/api/?name=Invalid&background=ef4444&color=fff&size=256';
+                            }}
+                          />
+                        ) : (
+                          <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-4 border-white/10 bg-slate-900 text-slate-400 shadow-2xl">
+                            <ImageIcon className="h-10 w-10" />
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -710,8 +813,8 @@ export default function ProfilePage() {
                   <div className="flex gap-3">
                     <button
                       type="submit"
-                      disabled={saving}
-                      className="flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-6 py-3 font-bold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 disabled:opacity-50"
+                      disabled={saving || !selectedImageFile}
+                      className="flex-1 overflow-hidden rounded-xl bg-linear-to-r from-purple-600 to-fuchsia-600 px-6 py-3 font-bold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 disabled:opacity-50"
                     >
                       {saving ? (
                         <>
@@ -729,13 +832,26 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => {
                         setShowImageModal(false);
-                        setTempImageUrl('');
+                        setSelectedImageFile(null);
+                        setSelectedImagePreview('');
                       }}
                       className="flex-1 rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white transition-all hover:bg-white/10"
                     >
                       Cancel
                     </button>
                   </div>
+
+                  {profileImage && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      disabled={saving}
+                      className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3 font-semibold text-red-300 transition-all hover:bg-red-500/20 disabled:opacity-50"
+                    >
+                      <Trash2 className="mr-2 inline h-4 w-4" />
+                      Remove Picture
+                    </button>
+                  )}
                 </form>
               </div>
             </div>

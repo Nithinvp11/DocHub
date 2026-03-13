@@ -11,6 +11,7 @@ import { decryptToken } from '@/lib/encryption';
 import { importFromGitHub } from '@/lib/github-simple-import';
 import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
+import { deriveTitleFromMarkdownPath } from '@/lib/github-path-utils';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
         const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
 
         // Convert markdown to HTML
-        const { markdownToHtml, extractTitle } = await import('@/lib/converters');
+        const { markdownToHtml } = await import('@/lib/converters');
         let htmlContent = content;
         try {
           htmlContent = await markdownToHtml(content);
@@ -110,14 +111,7 @@ export async function POST(req: NextRequest) {
           console.warn('[GitHub Import] Markdown conversion failed, storing raw content:', error);
         }
 
-        // Use relative path for title extraction (preserve casing)
-        const derivedTitle =
-          extractTitle(content) ||
-          relativePathToStore
-            .split('/')
-            .pop()
-            ?.replace(/\.(md|markdown)$/, '') ||
-          'Imported Document';
+        const derivedTitle = deriveTitleFromMarkdownPath(relativePathToStore);
 
         // Update existing document or create new one
         if (documentId) {

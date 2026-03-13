@@ -1,6 +1,6 @@
 # DocHub – Collaborative Documentation Platform
 
-DocHub is a professional collaborative documentation platform with Git-like versioning, GitHub integration, and real-time collaboration features.
+DocHub is a professional collaborative documentation platform with document versioning, GitHub integration, real-time collaboration features, and a built-in user feedback and admin review workflow.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.0.3-black)
@@ -12,14 +12,16 @@ DocHub is a professional collaborative documentation platform with Git-like vers
 ### Core Collaboration Features
 
 - 🚀 **Rich Text Editor** - TipTap-based editor with full formatting support
-- 📝 **Document Versioning** - Git-like version control for all documents
-- 👥 **Workspace Management** - Organize teams with role-based access control
-- 🔗 **Document Linking** - [[Wiki-style]] links with automatic backlinks
+- 📝 **Document Versioning** - Structured version history and restore for all documents
+- 👥 **Workspace Management** - Organize teams with permission-based access control
+- 🔗**Document Linking** - [[Wiki-style]] links with automatic backlinks
 - @ **Mentions** - Tag users with notifications and autocomplete
 - 💬 **Inline Comments** - Select text and add threaded comments
 - 📊 **Recent Documents** - Access history tracking
 - 🏷️ **Tags & Templates** - Organize and reuse document structures
-- 🔔 **Notifications** - Real-time updates for mentions and comments
+- 📝 **Feedback System** - Users can submit bug reports, feature requests, and improvement feedback
+- 🛠️ **Admin Feedback Dashboard** - Admins can triage, prioritize, and resolve user feedback
+- 🔔 **Notifications** - Real-time updates for mentions, comments, and feedback events
 - 🔍 **Search & Discovery** - Full-text search across workspaces
 
 ### GitHub Integration (✅ ALL ENHANCEMENTS COMPLETE!)
@@ -34,7 +36,7 @@ DocHub is a professional collaborative documentation platform with Git-like vers
 - 🔀 **Visual Merge Conflicts** - Side-by-side conflict resolution UI
 - ⏰ **Scheduled Sync** - Automated periodic synchronization with priority queue
 - 📜 **Commit History** - Timeline visualization with restore capability
-- 🌿 **Multi-Branch Support** - Switch branches and compare content
+- 🌿 **Multi-Branch Support** - Switch branches and manage branch-specific sync
 - 🎛️ **Auto-Sync UI** - Comprehensive dashboard for sync management
 - 🔐 **Token Management** - Secure OAuth token storage and refresh
 - 📊 **Sync Status Tracking** - Real-time monitoring of sync operations
@@ -42,7 +44,7 @@ DocHub is a professional collaborative documentation platform with Git-like vers
 ### Professional Infrastructure
 
 - 🔐 **Authentication** - Email/password + GitHub OAuth
-- 🛡️ **Authorization** - Role-based access control (Owner, Admin, Editor, Viewer)
+- 🛡️ **Authorization** - Permission-based access control for workspace actions
 - 📈 **Activity Logging** - Comprehensive audit trail
 - 🏥 **Health Checks** - Monitoring endpoint for status
 - ⚡ **Rate Limiting** - API protection
@@ -51,22 +53,13 @@ DocHub is a professional collaborative documentation platform with Git-like vers
 
 ## 📚 Documentation
 
-### Core Documentation
-
-- **[Complete Application Guide](./COMPLETE_APPLICATION_GUIDE.md)** - Comprehensive documentation covering all features, architecture, and deployment
-- **[Complete Testing Guide](./COMPLETE_TESTING_GUIDE.md)** - Step-by-step testing instructions with and without GitHub, includes all test cases
-- **[Additional Documentation](./DOCUMENTATION.md)** - Presentation-ready documentation with abstracts and system details
-- **[Read Document](./READ_DOCUMENT.md)** - Application overview and feature descriptions
-
-### GitHub Integration Documentation
-
-- **[GitHub Integration Summary](./docs/GITHUB_INTEGRATION_SUMMARY.md)** - Complete implementation guide with API reference and configuration
-- **[GitHub Integration Verification](./docs/GITHUB_INTEGRATION_VERIFICATION.md)** - Feature checklist and verification results
-- **[GitHub PR & Issue Tracking](./docs/GITHUB_PR_ISSUE_TRACKING.md)** - ⭐ **NEW!** Complete guide to Pull Request and Issue tracking features with UI locations
-
-### Project Status
-
-- **[Project Completion Status](./docs/PROJECT_COMPLETION_STATUS.md)** - 🎯 **92% Complete** - Detailed analysis of what's implemented, what's missing, and recommended next steps
+- **[Professional Documentation](./docs/PROFESSIONAL_DOCUMENTATION.md)** - Formal abstract, background, problem definition, methodology, objectives, modules, scope, and constraints
+- **[Documentation Hub](./docs/README.md)** - Start here for project docs, architecture artifacts, and writing workflow
+- **[Project Overview](./docs/PROJECT_OVERVIEW.md)** - Product scope, architecture, modules, and local development flow
+- **[Project Completion Status](./docs/PROJECT_COMPLETION_STATUS.md)** - Current implementation status and remaining gaps
+- **[Manual Testing Guide](./docs/MANUAL_TESTING_GUIDE.md)** - Validation scenarios for major workflows
+- **[Production Quick Start](./docs/QUICK_START_PRODUCTION.md)** - Deployment-focused setup instructions
+- **[Documentation Templates](./docs/templates/FEATURE_TEMPLATE.md)** - Reusable templates for feature/API/runbook documentation
 
 ## 🚀 Quick Start
 
@@ -452,6 +445,14 @@ POST   /api/recent-documents        # Track document view
 GET    /api/notifications           # Get notifications
 GET    /api/activity                # Get activity feed
 GET    /api/tags                    # Get tags
+
+# Feedback
+GET    /api/feedback                # Get feedback (admin: all, user: own)
+POST   /api/feedback                # Submit feedback
+GET    /api/feedback/[id]           # Get feedback detail
+PATCH  /api/feedback/[id]           # Update feedback
+DELETE /api/feedback/[id]           # Delete feedback (admin)
+GET    /api/feedback/stats          # Feedback dashboard stats (admin)
 ```
 
 Full API documentation: See [ARCHITECTURE.md](./ARCHITECTURE.md)

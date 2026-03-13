@@ -175,6 +175,7 @@ export function NotificationBell() {
       WORKSPACE_INVITE_REJECTED: '❌',
       WORKSPACE_INVITE_CANCELLED: '🚫',
       FEEDBACK_RECEIVED: '📝',
+      FEEDBACK_REPLY: '💬',
       DOCUMENT_SHARED: '📄',
       COMMENT_MENTION: '💬',
       VERSION_CONFLICT: '⚠️',
@@ -213,7 +214,7 @@ export function NotificationBell() {
           >
             <Bell className="h-5 w-5 text-slate-300 transition-colors hover:text-white" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-rose-600 text-xs font-bold text-white shadow-lg ring-2 shadow-red-500/50 ring-slate-900">
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-linear-to-br from-red-500 to-rose-600 text-xs font-bold text-white shadow-lg ring-2 shadow-red-500/50 ring-slate-900">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -223,7 +224,7 @@ export function NotificationBell() {
           align="end"
           className="w-96 overflow-hidden rounded-xl border-white/10 bg-slate-900/95 p-0 shadow-2xl shadow-purple-500/20 backdrop-blur-2xl"
         >
-          <div className="border-b border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-4">
+          <div className="border-b border-white/10 bg-linear-to-br from-slate-800/50 to-slate-900/50 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">Notifications</h3>
               {unreadCount > 0 && (

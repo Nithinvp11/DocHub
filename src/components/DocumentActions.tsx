@@ -20,17 +20,73 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Copy, Edit3, MoreVertical, Save, Trash2, FileText, Loader2, Github } from 'lucide-react';
 import { toast } from 'sonner';
 import { DocumentGitHubSync } from '@/components/DocumentGitHubSync';
+
+type DocumentPhase = 'PLANNING' | 'DEVELOPMENT' | 'REVIEW' | 'COMPLETE' | 'ARCHIVED';
+type DocumentType =
+  | 'GENERAL'
+  | 'SPECIFICATION'
+  | 'MEETING_NOTES'
+  | 'API_DOCS'
+  | 'GUIDE'
+  | 'RFC'
+  | 'TEMPLATE'
+  | 'FOLDER';
+
+const PHASE_OPTIONS: Array<{ value: DocumentPhase; label: string }> = [
+  { value: 'PLANNING', label: 'Planning' },
+  { value: 'DEVELOPMENT', label: 'Development' },
+  { value: 'REVIEW', label: 'Review' },
+  { value: 'COMPLETE', label: 'Complete' },
+  { value: 'ARCHIVED', label: 'Archived' },
+];
+
+const TYPE_OPTIONS: Array<{ value: DocumentType; label: string }> = [
+  { value: 'GENERAL', label: 'General' },
+  { value: 'SPECIFICATION', label: 'Specification' },
+  { value: 'MEETING_NOTES', label: 'Meeting Notes' },
+  { value: 'API_DOCS', label: 'API Docs' },
+  { value: 'GUIDE', label: 'Guide' },
+  { value: 'RFC', label: 'RFC' },
+  { value: 'TEMPLATE', label: 'Template' },
+  { value: 'FOLDER', label: 'Folder' },
+];
+
+const toSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
+const buildPathPreview = (phase: string, type: string, title: string) =>
+  `/${toSlug(phase)}/${toSlug(type)}/${toSlug(title)}`;
 
 interface DocumentActionsProps {
   documentId: string;
   documentTitle: string;
   workspaceId: string;
+  documentPhase: DocumentPhase;
+  documentType: DocumentType;
 }
 
-export function DocumentActions({ documentId, documentTitle, workspaceId }: DocumentActionsProps) {
+export function DocumentActions({
+  documentId,
+  documentTitle,
+  workspaceId,
+  documentPhase,
+  documentType,
+}: DocumentActionsProps) {
   const router = useRouter();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
@@ -39,7 +95,11 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
   const [loading, setLoading] = useState(false);
 
   const [newTitle, setNewTitle] = useState(documentTitle);
+  const [newPhase, setNewPhase] = useState<DocumentPhase>(documentPhase);
+  const [newType, setNewType] = useState<DocumentType>(documentType);
   const [saveAsTitle, setSaveAsTitle] = useState(`Copy of ${documentTitle}`);
+  const [saveAsPhase, setSaveAsPhase] = useState<DocumentPhase>(documentPhase);
+  const [saveAsType, setSaveAsType] = useState<DocumentType>(documentType);
 
   const handleRename = async () => {
     if (!newTitle.trim()) {
@@ -52,7 +112,7 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
       const res = await fetch(`/api/documents/${documentId}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle }),
+        body: JSON.stringify({ title: newTitle, phase: newPhase, type: newType }),
       });
 
       if (res.ok) {
@@ -61,7 +121,11 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
         router.refresh();
       } else {
         const error = await res.json();
-        toast.error(error.error || 'Failed to rename document');
+        if (res.status === 409) {
+          toast.error('Document name already exists in this phase/type path');
+        } else {
+          toast.error(error.error || 'Failed to rename document');
+        }
       }
     } catch (error) {
       console.error('Error renaming document:', error);
@@ -82,7 +146,12 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
       const res = await fetch(`/api/documents/${documentId}/save-as`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: saveAsTitle, workspaceId }),
+        body: JSON.stringify({
+          title: saveAsTitle,
+          workspaceId,
+          phase: saveAsPhase,
+          type: saveAsType,
+        }),
       });
 
       if (res.ok) {
@@ -92,7 +161,11 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
         router.push(`/dashboard/${workspaceId}/documents/${newDoc.id}`);
       } else {
         const error = await res.json();
-        toast.error(error.error || 'Failed to save as new document');
+        if (res.status === 409) {
+          toast.error('Document name already exists in this phase/type path');
+        } else {
+          toast.error(error.error || 'Failed to save as new document');
+        }
       }
     } catch (error) {
       console.error('Error saving as new document:', error);
@@ -127,12 +200,23 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
 
   return (
     <>
+      {/* GitHub Sync inline button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowGitHubSync(true)}
+        className="gap-1.5 rounded-xl border border-white/10 bg-white/5 text-slate-200 shadow-sm transition-all hover:border-purple-400/40 hover:bg-white/10 hover:text-white hover:shadow-purple-500/20"
+      >
+        <Github className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">GitHub Sync</span>
+      </Button>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 border border-purple-400/40 bg-slate-900/70 text-white shadow-sm shadow-purple-500/20 transition-all hover:border-purple-300/80 hover:bg-slate-800/80 hover:shadow-md hover:shadow-purple-500/30"
+            className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-slate-200 shadow-sm transition-all hover:border-white/20 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-purple-500/10"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -158,14 +242,6 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem
-            onClick={() => setShowGitHubSync(true)}
-            className="text-slate-200 hover:bg-white/10 focus:bg-white/10 focus:text-white"
-          >
-            <Github className="mr-2 h-4 w-4" />
-            GitHub Sync
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-white/10" />
-          <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
             className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-300"
           >
@@ -181,10 +257,10 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
           <DialogHeader>
             <DialogTitle className="text-white">Rename Document</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Enter a new name for this document
+              Update title, phase, and type. Path updates automatically.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="space-y-4 py-4">
             <Label htmlFor="new-title" className="text-slate-300">
               Document Title
             </Label>
@@ -200,6 +276,54 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
                 }
               }}
             />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="text-slate-300">Phase</Label>
+                <Select
+                  value={newPhase}
+                  onValueChange={(value) => setNewPhase(value as DocumentPhase)}
+                >
+                  <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
+                    <SelectValue placeholder="Select phase" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-slate-900 text-white">
+                    {PHASE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-slate-300">Type</Label>
+                <Select
+                  value={newType}
+                  onValueChange={(value) => setNewType(value as DocumentType)}
+                >
+                  <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-slate-900 text-white">
+                    {TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-slate-300">Updated Path</Label>
+              <Input
+                value={buildPathPreview(newPhase, newType, newTitle)}
+                readOnly
+                className="mt-2 border-white/10 bg-slate-950/50 text-slate-300"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -213,7 +337,7 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
             <Button
               onClick={handleRename}
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Rename
@@ -228,10 +352,10 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
           <DialogHeader>
             <DialogTitle className="text-white">Save As New Document</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Create a copy of this document with a new name
+              Create a copy with title, phase, and type.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="space-y-4 py-4">
             <Label htmlFor="save-as-title" className="text-slate-300">
               New Document Title
             </Label>
@@ -247,6 +371,54 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
                 }
               }}
             />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="text-slate-300">Phase</Label>
+                <Select
+                  value={saveAsPhase}
+                  onValueChange={(value) => setSaveAsPhase(value as DocumentPhase)}
+                >
+                  <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
+                    <SelectValue placeholder="Select phase" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-slate-900 text-white">
+                    {PHASE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-slate-300">Type</Label>
+                <Select
+                  value={saveAsType}
+                  onValueChange={(value) => setSaveAsType(value as DocumentType)}
+                >
+                  <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-slate-900 text-white">
+                    {TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-slate-300">New Path</Label>
+              <Input
+                value={buildPathPreview(saveAsPhase, saveAsType, saveAsTitle)}
+                readOnly
+                className="mt-2 border-white/10 bg-slate-950/50 text-slate-300"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -260,7 +432,7 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
             <Button
               onClick={handleSaveAs}
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Copy className="mr-2 h-4 w-4" />
@@ -289,7 +461,7 @@ export function DocumentActions({ documentId, documentTitle, workspaceId }: Docu
 
             {/* Warning Message */}
             <div className="flex gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-              <div className="mt-0.5 flex-shrink-0">
+              <div className="mt-0.5 shrink-0">
                 <svg
                   className="text-destructive h-5 w-5"
                   fill="none"

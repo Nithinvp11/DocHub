@@ -26,6 +26,8 @@ const LightPillar = ({
   const geometryRef = useRef(null);
   const mouseRef = useRef(new THREE.Vector2(0, 0));
   const timeRef = useRef(0);
+  const isVisibleRef = useRef(true); // Page visibility state
+  const isInViewportRef = useRef(true); // Viewport intersection state
   const [webGLSupported] = useState(() => {
     if (typeof document === 'undefined') return true;
     const canvas = document.createElement('canvas');
@@ -261,20 +263,49 @@ const LightPillar = ({
       if (!materialRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current)
         return;
 
-      const deltaTime = currentTime - lastTime;
+      // Only animate if tab is visible AND element is in viewport
+      const shouldAnimate = isVisibleRef.current && isInViewportRef.current;
 
-      if (deltaTime >= frameTime) {
-        timeRef.current += 0.016 * rotationSpeed;
-        const t = timeRef.current;
-        materialRef.current.uniforms.uTime.value = t;
-        materialRef.current.uniforms.uRotCos.value = Math.cos(t * 0.3);
-        materialRef.current.uniforms.uRotSin.value = Math.sin(t * 0.3);
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-        lastTime = currentTime - (deltaTime % frameTime);
+      if (shouldAnimate) {
+        const deltaTime = currentTime - lastTime;
+
+        if (deltaTime >= frameTime) {
+          timeRef.current += 0.016 * rotationSpeed;
+          const t = timeRef.current;
+          materialRef.current.uniforms.uTime.value = t;
+          materialRef.current.uniforms.uRotCos.value = Math.cos(t * 0.3);
+          materialRef.current.uniforms.uRotSin.value = Math.sin(t * 0.3);
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
+          lastTime = currentTime - (deltaTime % frameTime);
+        }
+      } else {
+        // When paused, update lastTime to prevent time jumps when resuming
+        lastTime = currentTime;
       }
 
       rafRef.current = requestAnimationFrame(animate);
     };
+
+    // Page Visibility API - pause when tab is hidden
+    const handleVisibilityChange = () => {
+      isVisibleRef.current = !document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Intersection Observer - pause when out of viewport
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          isInViewportRef.current = entry.isIntersecting;
+        });
+      },
+      {
+        threshold: 0, // Trigger when any part enters viewport
+        rootMargin: '50px', // Start animating slightly before fully visible
+      }
+    );
+    intersectionObserver.observe(container);
+
     rafRef.current = requestAnimationFrame(animate);
 
     let resizeTimeout = null;
@@ -296,6 +327,10 @@ const LightPillar = ({
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (intersectionObserver) {
+        intersectionObserver.disconnect();
+      }
       if (interactive) {
         container.removeEventListener('mousemove', handleMouseMove);
       }

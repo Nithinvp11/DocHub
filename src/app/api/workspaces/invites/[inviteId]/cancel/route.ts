@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
@@ -70,17 +71,15 @@ export async function DELETE(
         },
       });
 
-      await tx.activity.create({
-        data: {
-          type: 'INVITE_CANCELLED',
-          actorId: user.id,
-          workspaceId: invite.workspaceId,
-          entityType: 'workspace_invite',
-          entityId: inviteId,
-          metadata: {
-            invitedEmail: invite.invitedEmail,
-            invitedUserId: invite.invitedUserId,
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'INVITE_CANCELLED',
+        actorId: user.id,
+        workspaceId: invite.workspaceId,
+        entityType: 'workspace_invite',
+        entityId: inviteId,
+        metadata: {
+          invitedEmail: invite.invitedEmail,
+          invitedUserId: invite.invitedUserId,
         },
       });
 

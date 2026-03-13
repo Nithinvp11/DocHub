@@ -1,11 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Search, ShieldCheck, AlertCircle, Eye } from 'lucide-react';
+import { Search, ShieldCheck, Eye, BriefcaseBusiness } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -14,10 +11,8 @@ interface AdminUser {
   role: string;
   githubLinked: boolean;
   _count: {
+    ownedWorkspaces: number;
     workspaces: number;
-    documents: number;
-    versions: number;
-    comments: number;
     documentLocks: number;
   };
 }
@@ -45,15 +40,16 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-24">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-transparent border-t-violet-500" />
       </div>
     );
   }
@@ -62,99 +58,89 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Users Viewing</h1>
-          <p className="text-muted-foreground mt-2">
-            View all users in the system (Read-only)
+          <h1 className="text-3xl font-bold tracking-tight text-white">Users</h1>
+          <p className="mt-1 text-sm text-slate-300">
+            View all users in the system with a cleaner account-focused summary.
           </p>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
+        <span className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/10">
           {users.length} Total Users
-        </Badge>
+        </span>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Search users by email or name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredUsers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No users found
-              </div>
-            ) : (
-              filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                        {(user.name || user.email)[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{user.name || user.email}</span>
-                          {user.role === 'ADMIN' && (
-                            <Badge variant="default" className="bg-blue-600">
-                              <ShieldCheck className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {user.githubLinked && (
-                            <Badge variant="outline" className="text-xs">
-                              GitHub Linked
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground ml-13">
-                      <span>{user._count.workspaces} workspaces</span>
-                      <span>{user._count.documents} documents</span>
-                      <span>{user._count.versions} versions</span>
-                      <span>{user._count.comments} comments</span>
-                      {user._count.documentLocks > 0 && (
-                        <span className="text-orange-600 dark:text-orange-400">
-                          {user._count.documentLocks} active locks
-                        </span>
-                      )}
-                    </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Input
+          placeholder="Search users by email or name…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-12 rounded-2xl border-white/12 bg-slate-900/50 pl-10 text-white placeholder:text-slate-500 focus:border-violet-400/40 focus:ring-2 focus:ring-violet-400/15"
+        />
+      </div>
+
+      {/* User list */}
+      <div className="relative overflow-hidden rounded-4xl border border-white/12 bg-slate-900/52 backdrop-blur-2xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+        {filteredUsers.length === 0 ? (
+          <div className="py-16 text-center text-sm text-slate-500">No users found</div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/4"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-sm font-bold text-white shadow-lg shadow-violet-500/20">
+                  {(user.name || user.email)[0].toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-white">
+                      {user.name || user.email}
+                    </span>
+                    {user.role === 'ADMIN' && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">
+                        <ShieldCheck className="h-2.5 w-2.5" />
+                        Admin
+                      </span>
+                    )}
+                    {user.githubLinked && (
+                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                        GitHub Linked
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/6 px-2.5 py-1">
+                      <BriefcaseBusiness className="h-3 w-3" />
+                      {user._count.ownedWorkspaces + user._count.workspaces} workspaces
+                    </span>
+                    {user._count.documentLocks > 0 && (
+                      <span className="rounded-full border border-violet-400/20 bg-violet-400/10 px-2.5 py-1 text-violet-300">
+                        {user._count.documentLocks} active locks
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
-      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Eye className="w-5 h-5 text-blue-600 dark:text-blue-500 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-medium text-blue-900 dark:text-blue-200">
-                Read-Only Access
-              </p>
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                Admin has view-only access to user information. User management operations (create, edit, delete, promote, demote) are not available.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Read-only banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3.5 backdrop-blur-xl">
+        <Eye className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
+        <div>
+          <p className="text-sm font-semibold text-sky-300">Read-Only Access</p>
+          <p className="mt-0.5 text-xs text-sky-400/70">
+            Admin has view-only access to user information. User management operations (create,
+            edit, delete, promote, demote) are not available.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

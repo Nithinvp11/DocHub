@@ -30,6 +30,8 @@ import {
   Settings,
   Users,
   Crown,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -170,6 +172,12 @@ export function WorkspaceMembersPanel({
   const [invites, setInvites] = useState<WorkspaceInvite[]>([]);
   const [inviteActionId, setInviteActionId] = useState<string | null>(null);
   const [inviteActionType, setInviteActionType] = useState<'resend' | 'cancel' | null>(null);
+  const [expandedInvitePermissions, setExpandedInvitePermissions] = useState<
+    Record<string, boolean>
+  >({});
+  const [expandedMemberPermissions, setExpandedMemberPermissions] = useState<
+    Record<string, boolean>
+  >({});
 
   const canInviteMembers =
     !!isOwner || userPermissions.includes(WORKSPACE_PERMISSION.MEMBERS_INVITE);
@@ -520,28 +528,36 @@ export function WorkspaceMembersPanel({
       <div className="space-y-4">
         {/* Workspace Owner Section */}
         {workspaceOwner && (
-          <div className="rounded-lg border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-4">
+          <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-linear-to-br from-amber-500/10 via-orange-500/5 to-transparent p-4 shadow-lg shadow-amber-900/10">
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-amber-400/50 to-transparent" />
             <div className="mb-3 flex items-center gap-2">
-              <Crown className="h-4 w-4 text-amber-400" />
-              <span className="text-xs font-semibold text-amber-400 uppercase">Owner</span>
+              <Crown className="h-3.5 w-3.5 text-amber-400" />
+              <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
+                Workspace Owner
+              </span>
             </div>
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <AvatarImage
-                  src={workspaceOwner.image || undefined}
-                  alt={workspaceOwner.name || workspaceOwner.email}
-                />
-                <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white">
-                  {(workspaceOwner.name || workspaceOwner.email).charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative shrink-0">
+                <Avatar className="h-12 w-12 ring-2 ring-amber-400/30">
+                  <AvatarImage
+                    src={workspaceOwner.image || undefined}
+                    alt={workspaceOwner.name || workspaceOwner.email}
+                  />
+                  <AvatarFallback className="bg-linear-to-br from-amber-500 to-orange-600 text-sm font-bold text-white">
+                    {(workspaceOwner.name || workspaceOwner.email).charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-slate-900 bg-amber-400">
+                  <Crown className="h-2 w-2 text-slate-900" />
+                </span>
+              </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-semibold text-white">
                     {workspaceOwner.name || workspaceOwner.email}
                   </p>
                   {isOwner && (
-                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-400 uppercase">
                       You
                     </span>
                   )}
@@ -626,12 +642,12 @@ export function WorkspaceMembersPanel({
                 {addStep === 'confirm' && foundUser && (
                   <div className="rounded-lg border border-white/10 bg-slate-900/40 p-4">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12 flex-shrink-0">
+                      <Avatar className="h-12 w-12 shrink-0">
                         <AvatarImage
                           src={foundUser.image || undefined}
                           alt={foundUser.name || foundUser.email}
                         />
-                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-fuchsia-600 text-lg font-bold text-white shadow-lg shadow-purple-500/20">
+                        <AvatarFallback className="bg-linear-to-br from-purple-500 to-fuchsia-600 text-lg font-bold text-white shadow-lg shadow-purple-500/20">
                           {(foundUser.name || foundUser.email).charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -696,7 +712,7 @@ export function WorkspaceMembersPanel({
                       handleAddMember();
                     }
                   }}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
+                  className="flex-1 bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
                   disabled={
                     loading || (addStep === 'permissions' && selectedPermissions.length === 0)
                   }
@@ -741,50 +757,52 @@ export function WorkspaceMembersPanel({
               filteredMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/40 p-3 transition-all hover:border-purple-500/50 hover:bg-slate-900/70"
+                  className="group relative flex items-center justify-between overflow-hidden rounded-xl border border-white/8 bg-slate-900/50 p-3.5 transition-all hover:border-purple-500/40 hover:bg-slate-900/80 hover:shadow-lg hover:shadow-purple-900/10"
                 >
+                  {/* Hover accent */}
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarImage
-                        src={member.user.image || undefined}
-                        alt={member.user.name || member.user.email}
-                      />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-fuchsia-600 text-sm font-bold text-white shadow-lg shadow-purple-500/20">
-                        {(member.user.name || member.user.email).charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative shrink-0">
+                      <Avatar className="h-11 w-11 ring-2 ring-white/8 transition-all group-hover:ring-purple-500/30">
+                        <AvatarImage
+                          src={member.user.image || undefined}
+                          alt={member.user.name || member.user.email}
+                        />
+                        <AvatarFallback className="bg-linear-to-br from-purple-500 to-fuchsia-600 text-sm font-bold text-white">
+                          {(member.user.name || member.user.email).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {member.user.id === currentUserId && (
+                        <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-slate-900 bg-green-400" />
+                      )}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-semibold text-white">
                           {member.user.name || member.user.email}
                         </p>
                         {member.user.id === currentUserId && (
-                          <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-400">
+                          <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-purple-400 uppercase">
                             You
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-slate-400">{member.user.email}</p>
-                      <div className="mt-1 space-y-0.5">
+                      <p className="truncate text-xs text-slate-500">{member.user.email}</p>
+                      <div className="mt-0.5 space-y-0">
                         {member.grantedBy && (
-                          <p className="text-[11px] text-slate-500">
-                            Invited by:{' '}
-                            <span className="text-slate-400">
+                          <p className="text-[10px] text-slate-600">
+                            by{' '}
+                            <span className="text-slate-500">
                               {member.grantedBy.name || member.grantedBy.email}
                             </span>
                           </p>
                         )}
-                        {member.grantRoot && (
-                          <p className="text-[11px] text-slate-500">
-                            Managed under:{' '}
-                            <span className="text-slate-400">
-                              {member.grantRoot.name || member.grantRoot.email}
-                            </span>
-                          </p>
-                        )}
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {(member.permissions || []).slice(0, 2).map((perm) => {
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {(expandedMemberPermissions[member.id]
+                          ? member.permissions || []
+                          : (member.permissions || []).slice(0, 2)
+                        ).map((perm) => {
                           const permissionLabel = PERMISSION_LABEL_MAP.get(perm) || perm;
                           const permissionIcon = PERMISSION_ICON_MAP[
                             perm as WorkspacePermission
@@ -793,7 +811,7 @@ export function WorkspaceMembersPanel({
                           return (
                             <span
                               key={perm}
-                              className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs text-blue-400"
+                              className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-400"
                             >
                               <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{permissionIcon}</span>
                               {permissionLabel}
@@ -801,9 +819,27 @@ export function WorkspaceMembersPanel({
                           );
                         })}
                         {(member.permissions || []).length > 2 && (
-                          <span className="inline-flex items-center rounded-full border border-slate-500/20 bg-slate-500/10 px-2 py-0.5 text-xs text-slate-400">
-                            +{member.permissions.length - 2}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedMemberPermissions((prev) => ({
+                                ...prev,
+                                [member.id]: !prev[member.id],
+                              }))
+                            }
+                            className="inline-flex items-center gap-0.5 rounded-full border border-slate-600/30 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:border-purple-500/30 hover:bg-purple-500/10 hover:text-purple-400"
+                          >
+                            {expandedMemberPermissions[member.id] ? (
+                              <>
+                                <ChevronUp className="h-2.5 w-2.5" /> Less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-2.5 w-2.5" /> +
+                                {(member.permissions || []).length - 2} more
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -852,12 +888,20 @@ export function WorkspaceMembersPanel({
         {/* Pending Invites */}
         {invites.filter((inv) => inv.status !== 'CANCELLED').length > 0 && (
           <div className="space-y-3 pt-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-white">
-                Pending Invitations ({invites.filter((inv) => inv.status !== 'CANCELLED').length})
-              </h4>
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-linear-to-r from-transparent via-white/10 to-transparent" />
+              <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/60 px-3 py-1">
+                <Mail className="h-3 w-3 text-slate-400" />
+                <span className="text-xs font-medium text-slate-400">
+                  {invites.filter((inv) => inv.status !== 'CANCELLED').length} Pending
+                  {invites.filter((inv) => inv.status !== 'CANCELLED').length !== 1
+                    ? ' Invitations'
+                    : ' Invitation'}
+                </span>
+              </div>
+              <div className="h-px flex-1 bg-linear-to-r from-transparent via-white/10 to-transparent" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {invites
                 .filter((inv) => inv.status !== 'CANCELLED')
                 .map((invite) => {
@@ -866,96 +910,189 @@ export function WorkspaceMembersPanel({
                   const isCancelled = invite.status === 'CANCELLED';
                   const isActionLoading = inviteActionId === invite.id;
                   const statusLabel = isCancelled ? 'Cancelled' : isExpired ? 'Expired' : 'Pending';
+                  const isPermissionsExpanded = Boolean(expandedInvitePermissions[invite.id]);
+                  const visiblePermissions = isPermissionsExpanded
+                    ? invite.permissions
+                    : invite.permissions.slice(0, 3);
+                  const hiddenPermissionsCount = Math.max(invite.permissions.length - 3, 0);
+                  const inviteDisplayName =
+                    invite.invitedUser?.name || invite.invitedEmail || 'Unknown';
+                  const inviteInitial = inviteDisplayName.charAt(0).toUpperCase();
                   return (
                     <div
                       key={invite.id}
-                      className={`rounded-lg border p-3 ${
+                      className={`group relative overflow-hidden rounded-xl border p-4 transition-all ${
                         isExpired || isCancelled
                           ? 'border-slate-700/40 bg-slate-900/40'
-                          : 'border-purple-500/20 bg-purple-500/5'
+                          : 'border-purple-500/25 bg-linear-to-br from-purple-500/8 to-fuchsia-500/5 shadow-lg shadow-purple-900/10 hover:border-purple-500/40 hover:shadow-purple-900/20'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-semibold text-white">
-                              {invite.invitedUser?.name || invite.invitedEmail}
-                            </p>
-                            <Badge
-                              variant="secondary"
-                              className={`text-xs ${
+                      {/* Subtle top accent line */}
+                      {!isExpired && !isCancelled && (
+                        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-400/40 to-transparent" />
+                      )}
+
+                      {/* Header: Avatar + name + status */}
+                      <div className="flex items-start gap-3">
+                        <div className="relative shrink-0">
+                          <Avatar className="h-11 w-11 ring-2 ring-white/10">
+                            <AvatarImage
+                              src={invite.invitedUser?.image || undefined}
+                              alt={inviteDisplayName}
+                            />
+                            <AvatarFallback
+                              className={`text-sm font-bold text-white ${
                                 isExpired || isCancelled
-                                  ? 'bg-slate-700/50 text-slate-300'
-                                  : 'bg-purple-500/20 text-purple-300'
+                                  ? 'bg-linear-to-br from-slate-600 to-slate-700'
+                                  : 'bg-linear-to-br from-purple-500 to-fuchsia-600'
+                              }`}
+                            >
+                              {inviteInitial}
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Status dot */}
+                          <span
+                            className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-slate-900 ${
+                              isExpired || isCancelled ? 'bg-slate-500' : 'bg-amber-400'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {inviteDisplayName}
+                            </p>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
+                                isExpired || isCancelled
+                                  ? 'bg-slate-700/60 text-slate-400'
+                                  : 'bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30 ring-inset'
                               }`}
                             >
                               {statusLabel}
-                            </Badge>
+                            </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-400">
-                            Invited by {invite.invitedBy.name || invite.invitedBy.email}{' '}
+                          {invite.invitedUser?.email &&
+                            invite.invitedUser.email !== inviteDisplayName && (
+                              <p className="truncate text-xs text-slate-400">
+                                {invite.invitedUser.email}
+                              </p>
+                            )}
+                          {!invite.invitedUser && invite.invitedEmail && (
+                            <p className="truncate text-xs text-slate-400">{invite.invitedEmail}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Meta info */}
+                      <div className="mt-3 space-y-1 pl-14">
+                        <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <span className="text-slate-600">Invited by</span>
+                          <span className="font-medium text-slate-400">
+                            {invite.invitedBy.name || invite.invitedBy.email}
+                          </span>
+                          <span className="text-slate-600">·</span>
+                          <span className="text-slate-500">
                             {formatDistanceToNow(new Date(invite.createdAt), { addSuffix: true })}
+                          </span>
+                        </p>
+                        {invite.grantRoot && (
+                          <p className="text-xs text-slate-600">
+                            Under{' '}
+                            <span className="text-slate-500">
+                              {invite.grantRoot.name || invite.grantRoot.email}
+                            </span>
                           </p>
-                          {invite.grantRoot && (
-                            <p className="mt-1 text-xs text-slate-500">
-                              Managed under {invite.grantRoot.name || invite.grantRoot.email}
-                            </p>
-                          )}
-                          {invite.message && (
-                            <p className="mt-1 text-xs text-slate-400 italic">
-                              &ldquo;{invite.message}&rdquo;
-                            </p>
-                          )}
-                          {invite.permissions.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {invite.permissions.map((permission) => {
-                                const label = PERMISSION_LABEL_MAP.get(permission) || permission;
-                                return (
-                                  <Badge
-                                    key={permission}
-                                    variant="secondary"
-                                    className="text-[10px]"
-                                  >
-                                    {label}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          )}
+                        )}
+                        {invite.message && (
+                          <p className="text-xs text-slate-500 italic">
+                            &ldquo;{invite.message}&rdquo;
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Permissions */}
+                      {invite.permissions.length > 0 && (
+                        <div className="mt-3 pl-14">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {visiblePermissions.map((permission) => {
+                              const label = PERMISSION_LABEL_MAP.get(permission) || permission;
+                              const permIcon = PERMISSION_ICON_MAP[
+                                permission as WorkspacePermission
+                              ] ?? <Settings className="h-2.5 w-2.5" />;
+                              return (
+                                <span
+                                  key={permission}
+                                  className="inline-flex items-center gap-1 rounded-full border border-purple-500/25 bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-300"
+                                >
+                                  <span className="opacity-70 [&>svg]:h-2.5 [&>svg]:w-2.5">
+                                    {permIcon}
+                                  </span>
+                                  {label}
+                                </span>
+                              );
+                            })}
+                            {hiddenPermissionsCount > 0 && !isPermissionsExpanded && (
+                              <span className="inline-flex items-center rounded-full border border-slate-600/40 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                                +{hiddenPermissionsCount} more
+                              </span>
+                            )}
+                            {invite.permissions.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedInvitePermissions((prev) => ({
+                                    ...prev,
+                                    [invite.id]: !prev[invite.id],
+                                  }))
+                                }
+                                className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+                              >
+                                {isPermissionsExpanded ? 'Show less' : 'Show all'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer: expiry + actions */}
+                      <div className="mt-3 flex items-center justify-between pl-14">
+                        <div>
                           {invite.expiresAt && !isExpired && (
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="text-[10px] text-slate-600">
                               Expires{' '}
                               {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}
                             </p>
                           )}
                         </div>
                         {(canResendInvites || canCancelInvites) && invite.canManage !== false && (
-                          <div className="flex shrink-0 flex-col gap-2">
+                          <div className="flex items-center gap-2">
                             {canResendInvites && (
-                              <Button
-                                size="sm"
-                                variant="outline"
+                              <button
+                                type="button"
                                 disabled={!isPending || isActionLoading}
                                 onClick={() => handleResendInvite(invite.id)}
-                                className="border-white/10 text-xs"
+                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
                               >
+                                <Mail className="h-3 w-3" />
                                 {isActionLoading && inviteActionType === 'resend'
-                                  ? 'Resending...'
+                                  ? 'Sending…'
                                   : 'Resend'}
-                              </Button>
+                              </button>
                             )}
                             {canCancelInvites && (
-                              <Button
-                                size="sm"
-                                variant="outline"
+                              <button
+                                type="button"
                                 disabled={!isPending || isActionLoading}
                                 onClick={() => handleCancelInvite(invite.id)}
-                                className="border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-red-500/25 bg-red-500/10 px-3 text-xs font-medium text-red-400 backdrop-blur-sm transition-all hover:border-red-500/40 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                               >
+                                <X className="h-3 w-3" />
                                 {isActionLoading && inviteActionType === 'cancel'
-                                  ? 'Cancelling...'
+                                  ? 'Cancelling…'
                                   : 'Cancel'}
-                              </Button>
+                              </button>
                             )}
                           </div>
                         )}
@@ -1000,7 +1137,7 @@ export function WorkspaceMembersPanel({
               <Button
                 type="button"
                 onClick={handleUpdatePermissions}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
+                className="flex-1 bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
                 disabled={loading || editPermissions.length === 0}
               >
                 {loading ? 'Updating...' : 'Update Permissions'}

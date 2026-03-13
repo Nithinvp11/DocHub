@@ -155,12 +155,12 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border border-purple-500/20 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border border-purple-500/20 bg-linear-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500 to-transparent" />
 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white">
-            <div className="rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-600 p-2">
+            <div className="rounded-lg bg-linear-to-br from-purple-600 to-fuchsia-600 p-2">
               <MessageSquare className="h-5 w-5 text-white" />
             </div>
             Share Your Feedback
@@ -277,7 +277,7 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
                 >
                   <Star
                     className={`h-6 w-6 ${
-                      star <= formData.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'
+                      star <= formData.rating ? 'fill-violet-400 text-violet-400' : 'text-slate-600'
                     }`}
                   />
                 </motion.button>
@@ -307,7 +307,7 @@ export function FeedbackWidget({ trigger, className = '' }: FeedbackWidgetProps)
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+              className="flex-1 bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
               disabled={loading || (cooldownUntil !== null && Date.now() < cooldownUntil)}
             >
               {loading

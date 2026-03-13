@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { z } from 'zod';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
@@ -198,19 +199,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Delete workspace (cascade will handle related data)
     await prisma.$transaction(async (tx) => {
       // Log the deletion activity before deleting the workspace
-      await tx.activity.create({
-        data: {
-          type: 'WORKSPACE_DELETED',
-          actorId: user.id,
-          workspaceId: id,
-          entityType: 'workspace',
-          entityId: id,
-          metadata: {
-            workspaceName: workspace.name,
-            documentsCount: workspace._count.documents,
-            membersCount: workspace._count.members,
-            deletedAt: new Date().toISOString(),
-          },
+      await ActivityTracker.createWithClient(tx, {
+        type: 'WORKSPACE_DELETED',
+        actorId: user.id,
+        workspaceId: id,
+        entityType: 'workspace',
+        entityId: id,
+        metadata: {
+          workspaceName: workspace.name,
+          documentsCount: workspace._count.documents,
+          membersCount: workspace._count.members,
+          deletedAt: new Date().toISOString(),
         },
       });
 

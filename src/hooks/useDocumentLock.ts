@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface LockInfo {
   locked: boolean;
+  isOwnLock?: boolean;
   lock?: {
     userId: string;
     userName: string | null;
@@ -19,8 +20,8 @@ interface UseDocumentLockOptions {
   onLockUnavailable?: (lockInfo: LockInfo) => void;
 }
 
-const HEARTBEAT_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const LOCK_CHECK_INTERVAL = 30 * 1000; // 30 seconds
+const HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds
+const LOCK_CHECK_INTERVAL = 15 * 1000; // 15 seconds
 
 export function useDocumentLock({
   documentId,
@@ -37,6 +38,8 @@ export function useDocumentLock({
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const lockCheckIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isAcquiringRef = useRef(false);
+  const hasLockRef = useRef(false);
+  const documentIdRef = useRef(documentId);
 
   // Start heartbeat to keep lock alive
   const startHeartbeat = useCallback(() => {
@@ -54,7 +57,6 @@ export function useDocumentLock({
         });
 
         if (!response.ok) {
-          // Lock lost
           console.error('Failed to extend lock');
           if (heartbeatIntervalRef.current) {
             clearInterval(heartbeatIntervalRef.current);
@@ -103,16 +105,22 @@ export function useDocumentLock({
         return { locked: false };
       }
 
-      const data: LockInfo = await response.json();
+      const data = (await response.json()) as LockInfo;
 
       setLockInfo(data);
 
-      if (data.locked && data.lock) {
-        // Document is locked by someone
+      if (data.locked && data.isOwnLock) {
         if (!hasLock) {
-          // We don't have the lock, someone else does
-          onLockUnavailable?.(data);
+          setHasLock(true);
+          startHeartbeat();
         }
+      } else if (hasLock) {
+        stopHeartbeat();
+        setHasLock(false);
+      }
+
+      if (data.locked && data.lock && !data.isOwnLock && !hasLock) {
+        onLockUnavailable?.(data);
       }
 
       return data;
@@ -127,7 +135,7 @@ export function useDocumentLock({
       }
       return { locked: false };
     }
-  }, [documentId, hasLock, onLockUnavailable]);
+  }, [documentId, hasLock, onLockUnavailable, startHeartbeat, stopHeartbeat]);
 
   // Acquire lock
   const acquireLock = useCallback(async () => {
@@ -141,40 +149,13 @@ export function useDocumentLock({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      // First check if we already have a lock (from previous session)
-      const checkResponse = await fetch(`/api/documents/${documentId}/lock`, {
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-
-      if (!checkResponse.ok) {
-        clearTimeout(timeoutId);
-        setError('Failed to check lock status');
-        return false;
-      }
-
-      const checkData = await checkResponse.json();
-      clearTimeout(timeoutId);
-
-      // If we have our own lock, force release it first for clean state
-      if (checkData.locked && checkData.isOwnLock) {
-        try {
-          await fetch(`/api/documents/${documentId}/lock`, {
-            method: 'DELETE',
-            signal: AbortSignal.timeout(5000),
-          });
-        } catch (err) {
-          console.warn('Failed to clean up previous lock:', err);
-        }
-      }
-
       // Now try to acquire the lock
       const response = await fetch(`/api/documents/${documentId}/lock`, {
         method: 'POST',
         signal: AbortSignal.timeout(5000),
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -311,6 +292,14 @@ export function useDocumentLock({
     lockCheckIntervalRef.current = undefined;
   }, []);
 
+  useEffect(() => {
+    hasLockRef.current = hasLock;
+  }, [hasLock]);
+
+  useEffect(() => {
+    documentIdRef.current = documentId;
+  }, [documentId]);
+
   // Initial lock status check
   useEffect(() => {
     if (!enabled || !documentId) {
@@ -331,9 +320,9 @@ export function useDocumentLock({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (hasLock) {
+      if (hasLockRef.current) {
         // Best effort release - use fetch with keepalive for cleanup during unmount
-        fetch(`/api/documents/${documentId}/lock`, {
+        fetch(`/api/documents/${documentIdRef.current}/lock`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           keepalive: true, // Similar to sendBeacon - allows request to complete even if page unloads

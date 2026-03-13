@@ -23,6 +23,7 @@ export async function getAllUsers() {
       updatedAt: true,
       _count: {
         select: {
+          ownedWorkspaces: true,
           workspaces: true,
           documents: true,
           versions: true,
@@ -156,6 +157,17 @@ export async function getAllActiveLocks() {
  */
 export async function getSystemStats() {
   const now = new Date();
+
+  // Use UTC methods so date keys match the UTC timestamps stored in the DB.
+  // setHours(0,0,0,0) uses LOCAL time and toISOString() converts to UTC,
+  // which shifts the key by the local UTC offset and breaks the lookup.
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 29);
+  thirtyDaysAgo.setUTCHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
   const [
     totalUsers,
     adminUsers,
@@ -164,6 +176,8 @@ export async function getSystemStats() {
     totalVersions,
     activeLocks,
     totalComments,
+    usersRaw,
+    loginEventsRaw,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'ADMIN' } }),
@@ -172,13 +186,51 @@ export async function getSystemStats() {
     prisma.version.count(),
     prisma.documentLock.count({ where: { expiresAt: { gt: now } } }),
     prisma.comment.count(),
+    // New non-admin registrations in the last 30 days
+    prisma.user.findMany({
+      where: { role: 'USER', createdAt: { gte: thirtyDaysAgo } },
+      select: { createdAt: true },
+    }),
+    // All login events by non-admin users in the last 30 days
+    prisma.loginEvent.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, user: { role: 'USER' } },
+      select: { userId: true, createdAt: true },
+    }),
   ]);
+
+  // Build 30-day ISO date labels (UTC)
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(thirtyDaysAgo);
+    d.setUTCDate(d.getUTCDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+
+  // New registrations per day
+  const growthMap: Record<string, number> = {};
+  for (const u of usersRaw) {
+    const day = u.createdAt.toISOString().slice(0, 10);
+    growthMap[day] = (growthMap[day] ?? 0) + 1;
+  }
+
+  // Distinct signed-in users per day
+  const activeMap: Record<string, Set<string>> = {};
+  for (const loginEvent of loginEventsRaw) {
+    const day = loginEvent.createdAt.toISOString().slice(0, 10);
+    if (!activeMap[day]) activeMap[day] = new Set();
+    activeMap[day].add(loginEvent.userId);
+  }
+
+  const regularUsers = totalUsers - adminUsers;
+  const todayKey = today.toISOString().slice(0, 10);
 
   return {
     users: {
-      total: totalUsers,
+      total: regularUsers,
       admins: adminUsers,
-      regular: totalUsers - adminUsers,
+      regular: regularUsers,
+      todayActive: activeMap[todayKey]?.size ?? 0,
+      growth: days.map((d) => ({ date: d, count: growthMap[d] ?? 0 })),
+      dailyActive: days.map((d) => ({ date: d, count: activeMap[d]?.size ?? 0 })),
     },
     workspaces: totalWorkspaces,
     documents: totalDocuments,

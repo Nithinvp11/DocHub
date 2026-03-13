@@ -25,6 +25,8 @@ type StatusType =
   | 'owner'
   | 'admin'
   | 'member'
+  | 'connected'
+  | 'not-connected'
   | 'success'
   | 'warning'
   | 'error'
@@ -88,6 +90,17 @@ const statusConfig = {
     icon: Users,
     label: 'Member',
     className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  },
+  // GitHub connection states
+  connected: {
+    icon: GitBranch,
+    label: 'Connected',
+    className: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  },
+  'not-connected': {
+    icon: GitBranch,
+    label: 'Not connected',
+    className: 'bg-slate-700/10 text-slate-500 border-slate-700/20',
   },
   success: {
     icon: CheckCircle2,

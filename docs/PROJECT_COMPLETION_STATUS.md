@@ -15,7 +15,7 @@
 | Next.js 16 Setup               | ✅ 100% | App Router, Turbopack, TypeScript   |
 | Database (PostgreSQL + Prisma) | ✅ 100% | Schema complete, migrations working |
 | Authentication System          | ✅ 100% | Email/password + GitHub OAuth       |
-| Authorization (RBAC)           | ✅ 100% | Owner, Admin, Editor, Viewer roles  |
+| Authorization (Permissions)    | ✅ 100% | Capability-based permission checks  |
 | API Routes                     | ✅ 100% | 70+ endpoints fully functional      |
 | Error Handling                 | ✅ 100% | Comprehensive error responses       |
 | Health Checks                  | ✅ 100% | `/api/health` endpoint              |
@@ -48,7 +48,7 @@
 | -------------------- | ------- | ------------------------------ |
 | Create Workspace     | ✅ 100% | Full CRUD operations           |
 | Workspace Members    | ✅ 100% | Invite, remove, manage members |
-| Role Management      | ✅ 100% | 4 roles with permissions       |
+| Permission Model     | ✅ 100% | Capability-based permissions   |
 | Workspace Settings   | ✅ 100% | Name, description, metadata    |
 | Member Permissions   | ✅ 100% | Fine-grained access control    |
 | Workspace Activities | ✅ 100% | Activity feed per workspace    |
@@ -76,20 +76,19 @@
 
 ---
 
-### 5. Version Control System (100% ✅)
+### 5. Versioning System (100% ✅)
 
-| Feature              | Status  | Notes                    |
-| -------------------- | ------- | ------------------------ |
-| Auto-save Versions   | ✅ 100% | Automatic draft versions |
-| Manual Save Versions | ✅ 100% | Commit with messages     |
-| Version History      | ✅ 100% | Timeline view            |
-| Version Diff         | ✅ 100% | Side-by-side comparison  |
-| Version Restore      | ✅ 100% | Rollback to any version  |
-| Version Labels       | ✅ 100% | Tag important versions   |
-| Version Tags         | ✅ 100% | Categorize versions      |
-| SHA Hashing          | ✅ 100% | Git-like content hashing |
+| Feature              | Status  | Notes                       |
+| -------------------- | ------- | --------------------------- |
+| Auto-save Versions   | ✅ 100% | Automatic draft versions    |
+| Manual Save Versions | ✅ 100% | Commit with messages        |
+| Version History      | ✅ 100% | Timeline view               |
+| Version Restore      | ✅ 100% | Rollback to any version     |
+| Version Labels       | ✅ 100% | Tag important versions      |
+| Version Tags         | ✅ 100% | Categorize versions         |
+| SHA Hashing          | ✅ 100% | Content-based hash tracking |
 
-**Version Control Score: 100%**
+**Versioning Score: 100%**
 
 ---
 
@@ -257,7 +256,7 @@
 | Document Export (PDF)      | ❌ 0%   | Not implemented                     |
 | Document Export (Markdown) | ✅ 100% | Via GitHub export                   |
 | **Diagrams**               | ⚠️ 40%  | Excalidraw/Mermaid components exist |
-| **Advanced Permissions**   | ⚠️ 70%  | Basic RBAC, could be granular       |
+| **Advanced Permissions**   | ⚠️ 70%  | Capability set can be expanded      |
 | **API Documentation**      | ⚠️ 60%  | Exists in docs, needs OpenAPI spec  |
 
 **Additional Features Score: 75%**
@@ -324,7 +323,7 @@
 | Feature                  | Status  | Notes                            |
 | ------------------------ | ------- | -------------------------------- |
 | Authentication           | ✅ 100% | Secure password hashing          |
-| Authorization            | ✅ 100% | RBAC implemented                 |
+| Authorization            | ✅ 100% | Capability-based permissions     |
 | CSRF Protection          | ✅ 100% | NextAuth.js handles              |
 | SQL Injection Prevention | ✅ 100% | Prisma parameterized queries     |
 | XSS Protection           | ⚠️ 80%  | React escaping, needs audit      |
@@ -399,7 +398,7 @@
 All essential features for a collaborative documentation platform are FULLY IMPLEMENTED:
 
 - User authentication and management
-- Workspace collaboration with RBAC
+- Workspace collaboration with capability-based permissions
 - Document CRUD with rich text editing
 - Version control system
 - Comments and mentions
@@ -580,8 +579,8 @@ Optional enhancements:
    - Background sync service is production-grade
    - PR & Issue tracking integrated
 
-2. **Git-like Version Control** (Advanced)
-   - Full version history with diffs
+2. **Document Versioning** (Advanced)
+   - Full version history and restore operations
    - SHA hashing for content tracking
    - Restore to any point in time
 
@@ -590,8 +589,8 @@ Optional enhancements:
    - Document locking to prevent conflicts
    - Live activity feed
 
-4. **Comprehensive RBAC** (Enterprise-Ready)
-   - 4 roles with proper permissions
+4. **Comprehensive Permissions** (Enterprise-Ready)
+   - Capability-based permission checks
    - Workspace-level access control
    - Admin dashboard for management
 

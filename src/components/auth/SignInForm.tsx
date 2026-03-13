@@ -161,13 +161,13 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
           <motion.button
             type="submit"
             disabled={loading}
-            className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-purple-500 via-violet-600 to-fuchsia-600 px-6 py-4 font-semibold text-white shadow-xl shadow-purple-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-purple-500 via-violet-600 to-fuchsia-600 px-6 py-4 font-semibold text-white shadow-xl shadow-purple-500/30 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-60"
             whileHover={{ scale: loading ? 1 : 1.02, y: -2 }}
             whileTap={{ scale: loading ? 1 : 0.98 }}
           >
             {/* Shine effect */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
               animate={{
                 x: ['-100%', '200%'],
               }}
@@ -207,7 +207,7 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
           <div className="w-full border-t border-slate-700/50" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-gradient-to-r from-transparent via-slate-900/80 to-transparent px-4 font-medium text-slate-400">
+          <span className="bg-linear-to-r from-transparent via-slate-900/80 to-transparent px-4 font-medium text-slate-400">
             OR CONTINUE WITH
           </span>
         </div>

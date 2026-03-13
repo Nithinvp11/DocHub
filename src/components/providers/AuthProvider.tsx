@@ -40,6 +40,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status, pathname, router]);
 
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.id) {
+      return;
+    }
+
+    void fetch('/api/auth/touch-login', {
+      method: 'GET',
+      cache: 'no-store',
+    }).catch((error) => {
+      console.error('Failed to touch login event:', error);
+    });
+  }, [status, session?.user?.id]);
+
   // Show loading state while checking authentication
   if (status === 'loading') {
     return (

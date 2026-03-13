@@ -115,8 +115,13 @@ export function WorkspaceActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="icon" className="h-9 w-9 text-white hover:bg-white/10">
-            <MoreVertical className="h-5 w-5" />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-slate-200 shadow-sm backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-purple-500/10"
+            aria-label="Workspace actions"
+          >
+            <MoreVertical className="h-4.5 w-4.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 border-white/10 bg-slate-900 text-white">
@@ -149,7 +154,7 @@ export function WorkspaceActions({
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-md">
+        <DialogContent className="border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">Edit Workspace</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -194,7 +199,7 @@ export function WorkspaceActions({
             <Button
               onClick={handleEdit}
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
@@ -205,7 +210,7 @@ export function WorkspaceActions({
 
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl">
+        <DialogContent className="border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Workspace</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -225,7 +230,7 @@ export function WorkspaceActions({
             <Button
               onClick={handleDelete}
               disabled={loading}
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800"
+              className="bg-linear-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Trash2 className="mr-2 h-4 w-4" />

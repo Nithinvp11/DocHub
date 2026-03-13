@@ -21,6 +21,7 @@ interface InputDialogProps {
   label?: string;
   placeholder?: string;
   defaultValue?: string;
+  confirmText?: string;
   onConfirm: (value: string) => void;
   onCancel?: () => void;
 }
@@ -33,6 +34,7 @@ export function InputDialog({
   label,
   placeholder,
   defaultValue = '',
+  confirmText = 'Confirm',
   onConfirm,
   onCancel,
 }: InputDialogProps) {
@@ -64,7 +66,7 @@ export function InputDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-[425px]">
+      <DialogContent className="border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-white">{title}</DialogTitle>
           {description && (
@@ -103,9 +105,9 @@ export function InputDialog({
             onClick={handleConfirm}
             disabled={!value.trim()}
             type="button"
-            className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700 disabled:opacity-50"
+            className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700 disabled:opacity-50"
           >
-            Confirm
+            {confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -50,30 +50,6 @@ type PerformanceMemory = {
 };
 
 /**
- * Thresholds for Web Vitals ratings (based on web.dev recommendations)
- */
-const thresholds: Record<MetricName, { good: number; poor: number }> = {
-  CLS: { good: 0.1, poor: 0.25 },
-  FID: { good: 100, poor: 300 },
-  FCP: { good: 1800, poor: 3000 },
-  LCP: { good: 2500, poor: 4000 },
-  TTFB: { good: 800, poor: 1800 },
-  INP: { good: 200, poor: 500 },
-};
-
-/**
- * Determine rating based on metric value and thresholds
- */
-function getRating(metricName: MetricName, value: number): 'good' | 'needs-improvement' | 'poor' {
-  const threshold = thresholds[metricName];
-  if (!threshold) return 'good';
-
-  if (value <= threshold.good) return 'good';
-  if (value <= threshold.poor) return 'needs-improvement';
-  return 'poor';
-}
-
-/**
  * Send metric to analytics endpoint
  */
 async function sendToAnalytics(metric: PerformanceMetric): Promise<void> {

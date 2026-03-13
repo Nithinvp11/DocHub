@@ -4,7 +4,7 @@
 
 **Application Name:** DocHub – Collaborative Documentation Platform
 
-**Main Purpose:** A collaborative documentation platform with Git-like versioning, GitHub integration, and workspace-based organization. It combines the simplicity of Notion with the power of GitHub's version control for managing technical documentation and knowledge bases.
+**Main Purpose:** A collaborative documentation platform with structured document versioning, GitHub integration, workspace-based organization, and integrated user feedback management. It combines an easy editing experience with strong collaboration, synchronization, and administrative review capabilities for managing technical documentation and knowledge bases.
 
 **Target Users:**
 
@@ -61,7 +61,7 @@
 
 - **Toast Notifications:** Sonner
 - **Markdown Rendering:** React Markdown (for previews)
-- **Diff Visualization:** diff-match-patch
+- **Content Processing:** React Markdown and editor serialization utilities
 - **GitHub API:** Octokit
 - **Code Syntax Highlighting:** Lowlight (TipTap extension)
 
@@ -139,11 +139,10 @@
 - Recent documents tracking
 - Document actions (rename, duplicate, save as new)
 
-#### Version Control System
+#### Versioning System
 
 - Automatic version creation with commit messages
 - Version history viewing
-- Diff visualization (side-by-side comparison)
 - Version restoration
 - Version labeling/tagging
 - Version deletion
@@ -166,6 +165,15 @@
 - Comment resolution
 - Activity tracking
 - Notification system (basic)
+
+#### Feedback & Admin Features
+
+- User feedback submission (bug reports, feature requests, improvements, questions, general)
+- Feedback tab in settings with structured submission form
+- Admin feedback dashboard with filters and metrics
+- Feedback status/priority updates and admin notes
+- Feedback notifications to admins
+- Feedback rate limiting for abuse prevention
 
 #### Editor Features
 
@@ -204,8 +212,6 @@
 
 ### 📋 Planned Features (Not Started)
 
-- **GitHub Issues Integration:** Display and sync GitHub issues
-- **Pull Request Tracking:** Monitor PRs related to documents
 - **Team Chat:** Real-time messaging per workspace
 - **Advanced Analytics:** Document views, edit history, contributor stats
 - **Templates:** Document templates for common formats
@@ -1012,7 +1018,7 @@ const canDelete = isOwner || member?.permissions.includes('delete_documents');
 
 - Every document save creates version
 - Tracks author, timestamp, changes
-- Diff visualization available
+- Version timeline available
 - Restore previous versions
 
 #### Recent Documents ✅

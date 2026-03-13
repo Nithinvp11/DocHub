@@ -36,12 +36,12 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, secondaryAction }: EmptyStateProps) {
   return (
     <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-white/10">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-800/50 to-slate-900/50 backdrop-blur-xl" />
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 via-fuchsia-600/5 to-purple-600/5" />
+      <div className="absolute inset-0 bg-linear-to-br from-slate-900/50 via-slate-800/50 to-slate-900/50 backdrop-blur-xl" />
+      <div className="absolute inset-0 bg-linear-to-br from-purple-600/5 via-fuchsia-600/5 to-purple-600/5" />
 
       <CardContent className="relative flex flex-col items-center justify-center px-8 py-16 text-center">
         {icon && (
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 ring-1 ring-white/10">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-linear-to-br from-purple-500/20 to-fuchsia-500/20 ring-1 ring-white/10">
             {icon}
           </div>
         )}
@@ -51,7 +51,7 @@ export function EmptyState({ icon, title, description, action, secondaryAction }
           {action && (
             <Button
               onClick={action.onClick}
-              className="h-12 gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 px-6 font-semibold text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+              className="h-12 gap-2 bg-linear-to-r from-purple-600 to-fuchsia-600 px-6 font-semibold text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
             >
               <Plus className="h-5 w-5" />
               {action.label}
@@ -88,16 +88,20 @@ export function NoWorkspacesEmpty({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-export function NoDocumentsEmpty({ onCreate }: { onCreate: () => void }) {
+export function NoDocumentsEmpty({ onCreate }: { onCreate?: () => void }) {
   return (
     <EmptyState
       icon={<FileText className="h-10 w-10 text-purple-400" />}
       title="No documents yet"
       description="Start documenting your ideas, specs, and meeting notes. Click below to create your first document!"
-      action={{
-        label: 'Create Document',
-        onClick: onCreate,
-      }}
+      action={
+        onCreate
+          ? {
+              label: 'Create Document',
+              onClick: onCreate,
+            }
+          : undefined
+      }
     />
   );
 }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -11,7 +11,6 @@ import {
   PremiumCardTitle,
   PremiumCardDescription,
 } from '@/components/ui/card-premium';
-import { PremiumBadge } from '@/components/ui/badge-premium';
 import {
   FileText,
   GitBranch,
@@ -21,7 +20,6 @@ import {
   Zap,
   Shield,
   ArrowRight,
-  Sparkles,
   Code2,
   Rocket,
   Star,
@@ -94,7 +92,7 @@ export default function Home() {
 
         {/* Floating gradient orbs matching LightPillar colors */}
         <motion.div
-          className="absolute top-[20%] left-[10%] h-96 w-96 rounded-full bg-gradient-to-br from-purple-600/20 to-fuchsia-500/20 blur-3xl"
+          className="absolute top-[20%] left-[10%] h-96 w-96 rounded-full bg-linear-to-br from-purple-600/20 to-fuchsia-500/20 blur-3xl"
           animate={{
             x: [0, 50, 0],
             y: [0, -30, 0],
@@ -107,7 +105,7 @@ export default function Home() {
           }}
         />
         <motion.div
-          className="absolute top-[10%] right-[15%] h-[500px] w-[500px] rounded-full bg-gradient-to-br from-fuchsia-500/25 to-purple-600/20 blur-3xl"
+          className="absolute top-[10%] right-[15%] h-[500px] w-[500px] rounded-full bg-linear-to-br from-fuchsia-500/25 to-purple-600/20 blur-3xl"
           animate={{
             x: [0, -60, 0],
             y: [0, 40, 0],
@@ -120,7 +118,7 @@ export default function Home() {
           }}
         />
         <motion.div
-          className="absolute right-[10%] bottom-[15%] h-[450px] w-[450px] rounded-full bg-gradient-to-br from-blue-600/20 to-purple-600/25 blur-3xl"
+          className="absolute right-[10%] bottom-[15%] h-[450px] w-[450px] rounded-full bg-linear-to-br from-blue-600/20 to-purple-600/25 blur-3xl"
           animate={{
             x: [0, 30, 0],
             y: [0, -50, 0],
@@ -158,7 +156,7 @@ export default function Home() {
 
         {/* Vertical light beams */}
         <motion.div
-          className="absolute top-0 left-[20%] h-full w-px bg-gradient-to-b from-transparent via-purple-500/40 to-transparent"
+          className="absolute top-0 left-[20%] h-full w-px bg-linear-to-b from-transparent via-purple-500/40 to-transparent"
           animate={{
             opacity: [0.2, 0.6, 0.2],
           }}
@@ -169,7 +167,7 @@ export default function Home() {
           }}
         />
         <motion.div
-          className="absolute top-0 left-[60%] h-full w-px bg-gradient-to-b from-transparent via-fuchsia-500/40 to-transparent"
+          className="absolute top-0 left-[60%] h-full w-px bg-linear-to-b from-transparent via-fuchsia-500/40 to-transparent"
           animate={{
             opacity: [0.3, 0.7, 0.3],
           }}
@@ -181,7 +179,7 @@ export default function Home() {
           }}
         />
         <motion.div
-          className="absolute top-0 left-[80%] h-full w-px bg-gradient-to-b from-transparent via-blue-500/30 to-transparent"
+          className="absolute top-0 left-[80%] h-full w-px bg-linear-to-b from-transparent via-blue-500/30 to-transparent"
           animate={{
             opacity: [0.2, 0.5, 0.2],
           }}
@@ -203,19 +201,6 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {/* Premium badge */}
-            <motion.div
-              className="mb-8 flex justify-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-            >
-              <PremiumBadge variant="primary" showDot>
-                <Sparkles className="h-4 w-4" />
-                Collaborative Documentation Platform
-              </PremiumBadge>
-            </motion.div>
-
             {/* Heading */}
             <div className="mb-6">
               <motion.h1
@@ -228,7 +213,7 @@ export default function Home() {
               </motion.h1>
 
               <motion.div
-                className="mx-auto max-w-3xl text-center text-4xl font-semibold leading-tight bg-clip-text text-transparent sm:text-5xl lg:text-5xl"
+                className="mx-auto max-w-3xl bg-clip-text text-center text-4xl leading-tight font-semibold text-transparent sm:text-5xl lg:text-5xl"
                 style={{ backgroundImage: 'linear-gradient(90deg,#a78bfa,#fb7185)' }}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -259,14 +244,14 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-10 py-5 text-lg text-white shadow-2xl ring-1 ring-purple-600/30 transition-all hover:scale-105 hover:shadow-2xl hover:ring-2"
+                className="group relative overflow-hidden rounded-2xl bg-linear-to-r from-purple-600 to-fuchsia-600 px-10 py-5 text-lg text-white shadow-2xl ring-1 ring-purple-600/30 transition-all hover:scale-105 hover:shadow-2xl hover:ring-2"
               >
                 <Link href="/auth">
                   <span className="relative z-10 flex items-center gap-3">
                     Get Started Free
                     <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-fuchsia-500 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-fuchsia-500 opacity-0 transition-opacity group-hover:opacity-100" />
                 </Link>
               </Button>
             </motion.div>
@@ -321,7 +306,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-purple-500/20 to-fuchsia-500/20 p-3 backdrop-blur-sm">
                   <FileText className="h-6 w-6 text-purple-300" />
                 </div>
                 <PremiumCardTitle className="text-white">Rich Text Editor</PremiumCardTitle>
@@ -338,7 +323,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-fuchsia-500/20 to-pink-500/20 p-3 backdrop-blur-sm">
                   <GitBranch className="h-6 w-6 text-fuchsia-300" />
                 </div>
                 <PremiumCardTitle className="text-white">Git-Like Versioning</PremiumCardTitle>
@@ -355,7 +340,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-blue-500/20 to-purple-500/20 p-3 backdrop-blur-sm">
                   <Users className="h-6 w-6 text-blue-300" />
                 </div>
                 <PremiumCardTitle className="text-white">Real-Time Collaboration</PremiumCardTitle>
@@ -372,7 +357,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-purple-500/20 to-blue-500/20 p-3 backdrop-blur-sm">
                   <Github className="h-6 w-6 text-purple-300" />
                 </div>
                 <PremiumCardTitle className="text-white">GitHub Integration</PremiumCardTitle>
@@ -389,7 +374,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-fuchsia-500/20 to-purple-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-fuchsia-500/20 to-purple-500/20 p-3 backdrop-blur-sm">
                   <Lock className="h-6 w-6 text-fuchsia-300" />
                 </div>
                 <PremiumCardTitle className="text-white">Access Control</PremiumCardTitle>
@@ -406,7 +391,7 @@ export default function Home() {
               hover
             >
               <PremiumCardHeader>
-                <div className="rounded-premium mb-4 w-fit bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 p-3 backdrop-blur-sm">
+                <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-pink-500/20 to-fuchsia-500/20 p-3 backdrop-blur-sm">
                   <Zap className="h-6 w-6 text-pink-300" />
                 </div>
                 <PremiumCardTitle className="text-white">Lightning Fast</PremiumCardTitle>

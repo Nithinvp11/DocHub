@@ -1,6 +1,8 @@
 import { prisma } from './prisma';
 import { ActivityType, Prisma } from '@prisma/client';
 
+type ActivityClient = Prisma.TransactionClient | typeof prisma;
+
 export interface CreateActivityParams {
   type: ActivityType;
   actorId: string;
@@ -10,18 +12,76 @@ export interface CreateActivityParams {
   metadata?: Prisma.JsonValue;
 }
 
+async function buildActivityData(client: ActivityClient, params: CreateActivityParams) {
+  const [actor, workspace] = await Promise.all([
+    client.user.findUnique({
+      where: { id: params.actorId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+      },
+    }),
+    client.workspace.findUnique({
+      where: { id: params.workspaceId },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+  ]);
+
+  return {
+    type: params.type,
+    actorId: params.actorId,
+    workspaceId: params.workspaceId,
+    entityType: params.entityType,
+    entityId: params.entityId,
+    actorName: actor?.name ?? null,
+    actorEmail: actor?.email ?? null,
+    actorImage: actor?.image ?? null,
+    workspaceName: workspace?.name ?? null,
+    metadata: params.metadata || {},
+  };
+}
+
 export class ActivityTracker {
   static async create(params: CreateActivityParams) {
-    return prisma.activity.create({
-      data: {
-        type: params.type,
-        actorId: params.actorId,
-        workspaceId: params.workspaceId,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        metadata: params.metadata || {},
-      },
+    return this.createWithClient(prisma, params);
+  }
+
+  static async createWithClient(client: ActivityClient, params: CreateActivityParams) {
+    const data = await buildActivityData(client, params);
+
+    return client.activity.create({
+      data,
     });
+  }
+
+  static async createManyWithClient(client: ActivityClient, activities: CreateActivityParams[]) {
+    return Promise.all(activities.map((activity) => this.createWithClient(client, activity)));
+  }
+
+  static getActorLabel(activity: {
+    actor?: { name: string | null; email: string | null } | null;
+    actorName?: string | null;
+    actorEmail?: string | null;
+  }) {
+    return (
+      activity.actor?.name ||
+      activity.actor?.email ||
+      activity.actorName ||
+      activity.actorEmail ||
+      'A user'
+    );
+  }
+
+  static getWorkspaceLabel(activity: {
+    workspace?: { name: string } | null;
+    workspaceName?: string | null;
+  }) {
+    return activity.workspace?.name || activity.workspaceName || 'Deleted workspace';
   }
 
   static async getWorkspaceActivity(

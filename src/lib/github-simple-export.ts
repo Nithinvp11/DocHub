@@ -12,6 +12,7 @@
 import { Octokit } from 'octokit';
 import { prisma } from './prisma';
 import { htmlToMarkdownSafe } from './converters';
+import { deriveTitleFromMarkdownPath, isMarkdownPath } from './github-path-utils';
 
 /**
  * Root files that should stay at repository root (not in docs/)
@@ -306,13 +307,22 @@ export async function exportToGitHub(options: ExportOptions): Promise<ExportResu
           });
           result.totalExported++;
 
-          // Update document with relative githubPath (without basePath prefix)
-          if (relativePath !== doc.githubPath) {
+          // Keep stored githubPath/sha in sync and align title with markdown filename.
+          const normalizedTitle = isMarkdownPath(relativePath)
+            ? deriveTitleFromMarkdownPath(relativePath)
+            : doc.title;
+
+          if (
+            relativePath !== doc.githubPath ||
+            exportResult.sha ||
+            normalizedTitle !== doc.title
+          ) {
             await prisma.document.update({
               where: { id: doc.id },
               data: {
-                githubPath: relativePath,
-                githubSha: exportResult.sha,
+                ...(relativePath !== doc.githubPath ? { githubPath: relativePath } : {}),
+                ...(exportResult.sha ? { githubSha: exportResult.sha } : {}),
+                ...(normalizedTitle !== doc.title ? { title: normalizedTitle } : {}),
               },
             });
           }

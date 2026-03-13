@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           userIsAdmin = true;
           console.debug('[GET /api/feedback] admin access granted via admin-token');
         }
-      } catch (err) {
+      } catch {
         // ignore invalid admin token
       }
     }
@@ -67,8 +67,10 @@ export async function GET(request: NextRequest) {
     // Build query
     const where: Prisma.FeedbackWhereInput = {};
 
-    // Non-admin callers only see their own feedback
-    if (!userIsAdmin) {
+    // Only return all feedback when explicitly requested as admin view.
+    // Without ?admin=true, always scope to the current user's own feedback
+    // (even if their account has the ADMIN role — e.g. on the settings page).
+    if (!isAdmin) {
       if (!currentUser) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -140,8 +142,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
     }
 
-    // Validate rating if provided
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
+    // Validate rating if provided (null means no rating selected — that's valid)
+    if (rating !== undefined && rating !== null && (rating < 1 || rating > 5)) {
       return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 });
     }
 

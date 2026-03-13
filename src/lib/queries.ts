@@ -4,7 +4,7 @@
  */
 
 import { prisma } from './prisma';
-import { workspaceCache, documentCache, getCached } from './cache';
+import { workspaceCache, getCached } from './cache';
 
 /**
  * Get workspace with members - optimized query

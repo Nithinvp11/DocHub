@@ -48,8 +48,10 @@ model User {
   resolvedComments        InlineComment[]          @relation("InlineCommentResolver")
   commentReplies          InlineCommentReply[]
   favorites               UserFavorite[]
+  workspaceFavorites      WorkspaceFavorite[]
   recentDocuments         RecentDocument[]
   presence                Presence[]
+  loginEvents             LoginEvent[]
   documentLocks           DocumentLock[]
   notificationPreferences NotificationPreferences?
   feedback                Feedback[]
@@ -91,6 +93,18 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -104,6 +118,7 @@ model Workspace {
   id          String   @id @default(cuid())
   name        String
   description String?
+  memberLimit Int? // Optional limit for joined members (workspaceMember rows)
   ownerId     String // Workspace owner (single user)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -118,8 +133,10 @@ model Workspace {
   syncQueue         SyncQueue[]
   webhooks          GitHubWebhook[]
   githubIntegration WorkspaceGitHubIntegration?
-  uploadedImages    UploadedImage[]
-  invites           WorkspaceInvite[]
+  uploadedImages      UploadedImage[]
+  invites             WorkspaceInvite[]
+  workspaceFavorites  WorkspaceFavorite[]
+  deleteTombstones    GitHubDeleteTombstone[]
 
   @@index([updatedAt])
   @@index([ownerId])
@@ -422,15 +439,19 @@ model GitHubIssue {
 model Activity {
   id          String       @id @default(cuid())
   type        ActivityType
-  actorId     String
-  workspaceId String
+  actorId     String?
+  workspaceId String?
   entityType  String // "Document", "Comment", "Version", "GitHubPR", "GitHubIssue"
   entityId    String
+  actorName   String?
+  actorEmail  String?
+  actorImage  String?
+  workspaceName String?
   metadata    Json? // Additional context (e.g., document title, PR number)
   createdAt   DateTime     @default(now())
 
-  actor     User      @relation(fields: [actorId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User?      @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
   @@index([actorId])
@@ -507,6 +528,7 @@ enum NotificationType {
   GITHUB_ISSUE_ASSIGNED
   VERSION_CONFLICT
   FEEDBACK_RECEIVED
+  FEEDBACK_REPLY
   WORKSPACE_INVITE // Legacy - use WORKSPACE_INVITE_RECEIVED
   WORKSPACE_INVITE_RECEIVED
   WORKSPACE_INVITE_ACCEPTED
@@ -774,6 +796,21 @@ model UserFavorite {
   @@index([documentId])
 }
 
+// Workspace Favorites
+model WorkspaceFavorite {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
 // Recent Documents Access
 model RecentDocument {
   id         String   @id @default(cuid())
@@ -890,7 +927,8 @@ model Feedback {
   url         String? // Page URL where feedback was submitted
   userAgent   String? // Browser/device info
   screenshot  String? // Optional screenshot URL
-  adminNotes  String?          @db.Text
+  adminReply  String?          @db.Text // Admin reply visible to the user
+  repliedAt   DateTime?        // When admin first replied
   assignedTo  String? // Admin user ID
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -959,6 +997,20 @@ model SyncQueue {
   @@index([documentId])
   @@index([workspaceId])
   @@index([scheduledAt])
+}
+
+// Tombstone: records deleted app documents whose GitHub files still need to be removed
+model GitHubDeleteTombstone {
+  id          String    @id @default(cuid())
+  workspaceId String
+  githubPath  String    // Relative path stored on the document (e.g. "planning/general/my-doc.md")
+  deletedAt   DateTime  @default(now())
+  processedAt DateTime? // Set when the GitHub file has been deleted
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([processedAt])
 }
 
 // GitHub webhook management

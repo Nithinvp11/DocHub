@@ -1,13 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2, Settings } from 'lucide-react';
 
 export default function WorkspaceSettingsRedirect() {
   const router = useRouter();
-  const params = useParams();
-  const workspaceId = params.id as string;
 
   useEffect(() => {
     // Redirect to main settings page with workspaces tab
@@ -20,10 +18,10 @@ export default function WorkspaceSettingsRedirect() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-900 to-purple-900/20">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-900 via-slate-900 to-purple-900/20">
       <div className="text-center">
         <div className="mb-6 flex justify-center">
-          <div className="rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 p-4 shadow-2xl">
+          <div className="rounded-2xl bg-linear-to-br from-purple-600 to-fuchsia-600 p-4 shadow-2xl">
             <Settings className="h-10 w-10 text-white" />
           </div>
         </div>

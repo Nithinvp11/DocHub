@@ -191,7 +191,7 @@ export default function RecentDocumentsWidget({
                     <div
                       className={`${
                         compact ? 'h-10 w-10' : 'h-12 w-12'
-                      } from-primary/10 to-primary/5 flex flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br`}
+                      } from-primary/10 to-primary/5 flex flex-shrink-0 items-center justify-center rounded-lg bg-linear-to-br`}
                     >
                       {recent.document.emoji ? (
                         <span className={compact ? 'text-xl' : 'text-2xl'}>

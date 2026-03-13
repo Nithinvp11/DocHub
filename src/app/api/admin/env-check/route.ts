@@ -5,6 +5,8 @@
  * Check environment variable configuration status (admin only)
  */
 
+// TODO: unused API route — verify before deletion
+
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/session';
 import { validateEnvironment } from '@/lib/env-validation';

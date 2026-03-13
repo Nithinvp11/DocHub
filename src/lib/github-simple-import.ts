@@ -11,21 +11,8 @@
 
 import { Octokit } from 'octokit';
 import { prisma } from './prisma';
-import { extractTitle, markdownToHtml } from './converters';
-
-/**
- * Root files that should stay at repository root (not in docs/)
- */
-const ROOT_FILES = [
-  'README.md',
-  'readme.md',
-  'LICENSE',
-  'license',
-  'CONTRIBUTING.md',
-  'contributing.md',
-  'CODE_OF_CONDUCT.md',
-  'code_of_conduct.md',
-];
+import { markdownToHtml } from './converters';
+import { deriveTitleFromMarkdownPath } from './github-path-utils';
 
 /**
  * Strip docs/ prefix from GitHub path to get relative path for storage
@@ -295,17 +282,10 @@ export async function importFromGitHub(options: ImportOptions): Promise<ImportRe
           console.warn('[GitHub Import] Markdown conversion failed, storing raw content:', error);
         }
 
-        // Preserve exact casing from GitHub path for title extraction
-        const derivedTitle =
-          extractTitle(content) ||
-          relativePath
-            .split('/')
-            .pop()
-            ?.replace(/\.(md|markdown)$/, '') ||
-          'Imported Document';
+        const derivedTitle = deriveTitleFromMarkdownPath(relativePath);
 
         // Create or update document in workspace
-        const document = await prisma.document.upsert({
+        await prisma.document.upsert({
           where: {
             workspaceId_path: {
               workspaceId,

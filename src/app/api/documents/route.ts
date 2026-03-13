@@ -8,16 +8,30 @@ import { sanitizeText, sanitizeMarkdown } from '@/lib/sanitize';
 import { PAGINATION_LIMITS } from '@/lib/constants';
 import { ActivityTracker } from '@/lib/activity';
 import { generateUniqueGitHubPath } from '@/lib/github-path-utils';
+import {
+  assertDocumentPathAvailable,
+  DocumentPathConflictError,
+  generateUniqueDocumentPath,
+} from '@/lib/document-path-utils';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
 const documentSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string(),
-  path: z.string().min(1),
+  path: z.string().min(1).optional(),
   phase: z.enum(['PLANNING', 'DEVELOPMENT', 'REVIEW', 'COMPLETE', 'ARCHIVED']).optional(),
   type: z
-    .enum(['GENERAL', 'SPECIFICATION', 'MEETING_NOTES', 'API_DOCS', 'GUIDE', 'RFC'])
+    .enum([
+      'GENERAL',
+      'SPECIFICATION',
+      'MEETING_NOTES',
+      'API_DOCS',
+      'GUIDE',
+      'RFC',
+      'TEMPLATE',
+      'FOLDER',
+    ])
     .optional(),
   workspaceId: z.string(),
 });
@@ -125,7 +139,9 @@ export async function POST(req: NextRequest) {
     // Sanitize inputs
     const sanitizedTitle = sanitizeText(title);
     const sanitizedContent = sanitizeMarkdown(content);
-    const sanitizedPath = sanitizeText(path);
+    const sanitizedPath = path ? sanitizeText(path) : undefined;
+    const targetPhase = phase || 'PLANNING';
+    const targetType = type || 'GENERAL';
 
     // CRITICAL: Ensure initial version has content
     // If content is empty, use a default placeholder to prevent empty version 1
@@ -133,25 +149,21 @@ export async function POST(req: NextRequest) {
 
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.DOCUMENTS_CREATE);
 
-    // Check if document with same path exists
-    const existingDoc = await prisma.document.findFirst({
-      where: {
+    const finalPath =
+      sanitizedPath ||
+      (await generateUniqueDocumentPath({
         workspaceId,
-        path,
-      },
-    });
+        phase: targetPhase,
+        type: targetType,
+        title: sanitizedTitle,
+      }));
 
-    if (existingDoc) {
-      return NextResponse.json(
-        { error: 'Document with this path already exists' },
-        { status: 400 }
-      );
-    }
+    await assertDocumentPathAvailable({ workspaceId, path: finalPath });
 
     // Generate unique GitHub path
     const githubPath = await generateUniqueGitHubPath({
-      phase: phase || 'PLANNING',
-      type: type || 'GENERAL',
+      phase: targetPhase,
+      type: targetType,
       title: sanitizedTitle,
       workspaceId,
     });
@@ -160,9 +172,9 @@ export async function POST(req: NextRequest) {
       data: {
         title: sanitizedTitle,
         content: initialContent, // Use initialContent instead of sanitizedContent
-        path: sanitizedPath,
-        phase,
-        type,
+        path: finalPath,
+        phase: targetPhase,
+        type: targetType,
         workspaceId,
         authorId: user.id,
         githubPath,
@@ -210,6 +222,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof WorkspacePermissionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    if (error instanceof DocumentPathConflictError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
     if (error instanceof z.ZodError) {

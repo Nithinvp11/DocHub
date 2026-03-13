@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { checkDatabaseHealth } from '@/lib/api-middleware';
 import { logger } from '@/lib/logger';
 import { validateEnvironment } from '@/lib/env-validation';
@@ -7,7 +7,7 @@ import { validateEnvironment } from '@/lib/env-validation';
  * GET /api/health
  * Health check endpoint for monitoring
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = performance.now();
 
   try {

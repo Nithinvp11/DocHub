@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Loader2, Mail, CheckCircle2, XCircle, Clock, Users, Inbox } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, XCircle, Clock, Users, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { formatDistanceToNow } from 'date-fns';
@@ -165,7 +165,7 @@ export default function InvitesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <AuroraBackground />
       <div className="relative z-10 container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-6 flex items-center gap-4">

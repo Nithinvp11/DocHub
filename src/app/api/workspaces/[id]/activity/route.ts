@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
@@ -61,6 +62,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
               email: activity.actor.email,
             }
           : undefined,
+        actorName: activity.actorName,
+        actorEmail: activity.actorEmail,
         metadata: activity.metadata as Record<string, unknown>,
       }),
     }));
@@ -89,9 +92,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 function formatActivityDescription(activity: {
   type: string;
   actor?: { name?: string | null; email: string };
+  actorName?: string | null;
+  actorEmail?: string | null;
   metadata?: Record<string, unknown>;
 }): string {
-  const actorName = activity.actor?.name || activity.actor?.email || 'A user';
+  const actorName = ActivityTracker.getActorLabel(activity);
   const metadata = activity.metadata || {};
 
   switch (activity.type) {
@@ -128,6 +133,10 @@ function formatActivityDescription(activity: {
       return `${actorName} created the workspace`;
     case 'WORKSPACE_DELETED':
       return `${actorName} deleted the workspace`;
+    case 'GITHUB_IMPORT':
+      return `${actorName} imported ${metadata.filesImported || 0} file(s) from "${metadata.repoName || metadata.repository || 'a repository'}"`;
+    case 'GITHUB_EXPORT':
+      return `${actorName} exported ${metadata.filesExported || 0} file(s) to "${metadata.repoName || metadata.repository || 'a repository'}"`;
     case 'GITHUB_SYNC_SUCCESS':
       return `${actorName} successfully synced document "${metadata.documentTitle || 'a document'}" with GitHub`;
     case 'GITHUB_SYNC_FAILED':

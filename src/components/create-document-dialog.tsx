@@ -25,13 +25,30 @@ import {
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 
+const toSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
+const buildPathPreview = (phase: string, type: string, title: string) =>
+  `/${toSlug(phase)}/${toSlug(type)}/${toSlug(title)}`;
+
 interface CreateDocumentDialogProps {
   workspaceId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps) {
+export function CreateDocumentDialog({
+  workspaceId,
+  open: controlledOpen,
+  onOpenChange,
+}: CreateDocumentDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -39,6 +56,17 @@ export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps)
     phase: 'PLANNING',
     type: 'GENERAL',
   });
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(value);
+      return;
+    }
+
+    setInternalOpen(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,22 +81,30 @@ export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps)
           ...formData,
           workspaceId,
           content: '', // Start with blank content
-          path: `docs/${formData.title.toLowerCase().replace(/\s+/g, '-')}.md`, // Auto-generate path
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to create document');
-        toast.error(data.error || 'Failed to create document');
+        if (response.status === 409) {
+          setError('Document name already exists in this phase/type path');
+          toast.error('Document name already exists in this phase/type path');
+        } else {
+          setError(data.error || 'Failed to create document');
+          toast.error(data.error || 'Failed to create document');
+        }
         return;
       }
 
       toast.success('Document created successfully!');
       setOpen(false);
       setFormData({ title: '', phase: 'PLANNING', type: 'GENERAL' });
-      router.refresh();
+      if (data?.id) {
+        router.push(`/dashboard/${workspaceId}/documents/${data.id}`);
+      } else {
+        router.refresh();
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
       toast.error('An error occurred. Please try again.');
@@ -79,13 +115,15 @@ export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700">
-          <Plus className="mr-2 h-4 w-4" />
-          New Document
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-[525px]">
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700">
+            <Plus className="mr-2 h-4 w-4" />
+            New Document
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl sm:max-w-[525px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="text-white">Create New Document</DialogTitle>
@@ -153,9 +191,19 @@ export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps)
                     <SelectItem value="API_DOCS">API Docs</SelectItem>
                     <SelectItem value="GUIDE">Guide</SelectItem>
                     <SelectItem value="RFC">RFC</SelectItem>
+                    <SelectItem value="TEMPLATE">Template</SelectItem>
+                    <SelectItem value="FOLDER">Folder</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-white">Path Preview</Label>
+              <Input
+                value={buildPathPreview(formData.phase, formData.type, formData.title)}
+                readOnly
+                className="border-white/20 bg-white/5 text-slate-300"
+              />
             </div>
             {error && <div className="text-sm text-red-400">{error}</div>}
           </div>
@@ -170,7 +218,7 @@ export function CreateDocumentDialog({ workspaceId }: CreateDocumentDialogProps)
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
             >
               {loading ? 'Creating...' : 'Create Document'}
             </Button>

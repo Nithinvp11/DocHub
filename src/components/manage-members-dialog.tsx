@@ -154,7 +154,7 @@ export function ManageMembersDialog({
           Invite Members
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl">
+      <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto border border-white/10 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-white">Workspace Members</DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -220,7 +220,7 @@ export function ManageMembersDialog({
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
+              className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
             >
               {loading ? 'Sending...' : 'Send Invitation'}
             </Button>
@@ -241,7 +241,7 @@ export function ManageMembersDialog({
                       src={member.user.image || undefined}
                       alt={member.user.name || member.user.email}
                     />
-                    <AvatarFallback className="bg-gradient-to-br from-purple-600 to-fuchsia-600 text-sm font-semibold text-white">
+                    <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-sm font-semibold text-white">
                       {(member.user.name || member.user.email).charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

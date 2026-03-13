@@ -120,7 +120,7 @@ export function DocumentDiffView({
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header */}
-      <div className="shrink-0 border-b bg-gradient-to-r from-slate-50 to-white p-4">
+      <div className="shrink-0 border-b bg-linear-to-r from-slate-50 to-white p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h1 className="text-xl font-bold text-slate-900">Document Comparison</h1>

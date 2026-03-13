@@ -38,8 +38,8 @@ export function DocumentFilters({ onFilterChange }: DocumentFiltersProps) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-800/80 to-slate-900/80 p-6">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-900/80 via-slate-800/80 to-slate-900/80 p-6">
+      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-500/50 to-transparent" />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2 md:col-span-1">

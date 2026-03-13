@@ -13,10 +13,10 @@ export default function SearchPage() {
           {/* Header */}
           <div className="mb-12 text-center">
             <div className="mb-6 flex items-center justify-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/30">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/30">
                 <SearchIcon className="h-8 w-8 text-white" />
               </div>
-              <h1 className="bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-5xl font-bold text-transparent">
+              <h1 className="bg-linear-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-5xl font-bold text-transparent">
                 Search
               </h1>
             </div>

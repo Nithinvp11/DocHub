@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
           userIsAdmin = true;
           console.debug('[GET /api/feedback/stats] admin access granted via admin-token');
         }
-      } catch (err) {
+      } catch {
         // ignore invalid admin token
       }
     }

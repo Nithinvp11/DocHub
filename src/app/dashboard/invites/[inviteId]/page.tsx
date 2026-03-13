@@ -175,7 +175,7 @@ export default function InviteDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-purple-900/20 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-900 to-purple-900/20 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-2xl">
         <Link href="/dashboard" className="mb-6 inline-flex">
           <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
@@ -270,7 +270,7 @@ export default function InviteDetailsPage() {
               <div className="flex items-center gap-3">
                 <Avatar>
                   {invite.invitedBy.image && <AvatarImage src={invite.invitedBy.image} />}
-                  <AvatarFallback className="bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white">
+                  <AvatarFallback className="bg-linear-to-br from-purple-600 to-fuchsia-600 text-white">
                     {invite.invitedBy.name
                       ?.split(' ')
                       .map((name) => name[0])
@@ -345,7 +345,7 @@ export default function InviteDetailsPage() {
                   <Button
                     onClick={handleAccept}
                     disabled={processing || isExpired}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+                    className="flex-1 bg-linear-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
                   >
                     {processing ? (
                       <>
@@ -378,7 +378,7 @@ export default function InviteDetailsPage() {
               ) : isAccepted ? (
                 <Button
                   onClick={() => router.push(`/dashboard/${invite.workspaceId}`)}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white"
+                  className="flex-1 bg-linear-to-r from-purple-600 to-fuchsia-600 text-white"
                 >
                   Open Workspace
                 </Button>
