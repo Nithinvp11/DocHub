@@ -27,7 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Copy, Edit3, MoreVertical, Save, Trash2, FileText, Loader2, Github } from 'lucide-react';
+import {
+  Copy,
+  Edit3,
+  MoreVertical,
+  Save,
+  Trash2,
+  FileText,
+  Loader2,
+  Github,
+  RotateCcw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { DocumentGitHubSync } from '@/components/DocumentGitHubSync';
 
@@ -67,10 +77,24 @@ const toSlug = (value: string) =>
     .trim()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-const buildPathPreview = (phase: string, type: string, title: string) =>
+const buildAutoPath = (phase: string, type: string, title: string) =>
   `/${toSlug(phase)}/${toSlug(type)}/${toSlug(title)}`;
+
+const validatePathFormat = (path: string): string | null => {
+  if (!path || path === '/') return 'Path cannot be empty';
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length === 0) return 'Path cannot be empty';
+  if (segments.length > 10) return 'Path cannot have more than 10 segments';
+  for (const seg of segments) {
+    if (seg.length > 100) return `Segment "${seg}" exceeds 100 characters`;
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(seg))
+      return `Invalid segment "${seg}": use lowercase letters, numbers, and hyphens`;
+  }
+  return null;
+};
 
 interface DocumentActionsProps {
   documentId: string;
@@ -78,6 +102,7 @@ interface DocumentActionsProps {
   workspaceId: string;
   documentPhase: DocumentPhase;
   documentType: DocumentType;
+  canUseGitHubSync?: boolean;
 }
 
 export function DocumentActions({
@@ -86,6 +111,7 @@ export function DocumentActions({
   workspaceId,
   documentPhase,
   documentType,
+  canUseGitHubSync = true,
 }: DocumentActionsProps) {
   const router = useRouter();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
@@ -97,13 +123,89 @@ export function DocumentActions({
   const [newTitle, setNewTitle] = useState(documentTitle);
   const [newPhase, setNewPhase] = useState<DocumentPhase>(documentPhase);
   const [newType, setNewType] = useState<DocumentType>(documentType);
+  const [renameCustomPath, setRenameCustomPath] = useState(
+    buildAutoPath(documentPhase, documentType, documentTitle)
+  );
+  const [renamePathEdited, setRenamePathEdited] = useState(false);
+  const [renamePathError, setRenamePathError] = useState<string | null>(null);
+
   const [saveAsTitle, setSaveAsTitle] = useState(`Copy of ${documentTitle}`);
   const [saveAsPhase, setSaveAsPhase] = useState<DocumentPhase>(documentPhase);
   const [saveAsType, setSaveAsType] = useState<DocumentType>(documentType);
+  const [saveAsCustomPath, setSaveAsCustomPath] = useState(
+    buildAutoPath(documentPhase, documentType, `Copy of ${documentTitle}`)
+  );
+  const [saveAsPathEdited, setSaveAsPathEdited] = useState(false);
+  const [saveAsPathError, setSaveAsPathError] = useState<string | null>(null);
+
+  // Keep rename path in sync when title/phase/type change (only if not manually edited)
+  const handleRenameTitleChange = (value: string) => {
+    setNewTitle(value);
+    if (!renamePathEdited) {
+      setRenameCustomPath(buildAutoPath(newPhase, newType, value));
+    }
+  };
+  const handleRenamePhaseChange = (value: DocumentPhase) => {
+    setNewPhase(value);
+    if (!renamePathEdited) {
+      setRenameCustomPath(buildAutoPath(value, newType, newTitle));
+    }
+  };
+  const handleRenameTypeChange = (value: DocumentType) => {
+    setNewType(value);
+    if (!renamePathEdited) {
+      setRenameCustomPath(buildAutoPath(newPhase, value, newTitle));
+    }
+  };
+  const handleRenamePathChange = (value: string) => {
+    setRenamePathEdited(true);
+    setRenameCustomPath(value);
+    setRenamePathError(value ? validatePathFormat(value) : null);
+  };
+  const resetRenamePath = () => {
+    setRenamePathEdited(false);
+    setRenamePathError(null);
+    setRenameCustomPath(buildAutoPath(newPhase, newType, newTitle));
+  };
+
+  // Keep save-as path in sync when title/phase/type change (only if not manually edited)
+  const handleSaveAsTitleChange = (value: string) => {
+    setSaveAsTitle(value);
+    if (!saveAsPathEdited) {
+      setSaveAsCustomPath(buildAutoPath(saveAsPhase, saveAsType, value));
+    }
+  };
+  const handleSaveAsPhaseChange = (value: DocumentPhase) => {
+    setSaveAsPhase(value);
+    if (!saveAsPathEdited) {
+      setSaveAsCustomPath(buildAutoPath(value, saveAsType, saveAsTitle));
+    }
+  };
+  const handleSaveAsTypeChange = (value: DocumentType) => {
+    setSaveAsType(value);
+    if (!saveAsPathEdited) {
+      setSaveAsCustomPath(buildAutoPath(saveAsPhase, value, saveAsTitle));
+    }
+  };
+  const handleSaveAsPathChange = (value: string) => {
+    setSaveAsPathEdited(true);
+    setSaveAsCustomPath(value);
+    setSaveAsPathError(value ? validatePathFormat(value) : null);
+  };
+  const resetSaveAsPath = () => {
+    setSaveAsPathEdited(false);
+    setSaveAsPathError(null);
+    setSaveAsCustomPath(buildAutoPath(saveAsPhase, saveAsType, saveAsTitle));
+  };
 
   const handleRename = async () => {
     if (!newTitle.trim()) {
       toast.error('Title cannot be empty');
+      return;
+    }
+    const pErr = renameCustomPath ? validatePathFormat(renameCustomPath) : null;
+    if (pErr) {
+      setRenamePathError(pErr);
       return;
     }
 
@@ -112,7 +214,13 @@ export function DocumentActions({
       const res = await fetch(`/api/documents/${documentId}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle, phase: newPhase, type: newType }),
+        body: JSON.stringify({
+          title: newTitle,
+          phase: newPhase,
+          type: newType,
+          // Only send custom path if user explicitly edited it
+          ...(renamePathEdited && renameCustomPath ? { path: renameCustomPath } : {}),
+        }),
       });
 
       if (res.ok) {
@@ -122,7 +230,9 @@ export function DocumentActions({
       } else {
         const error = await res.json();
         if (res.status === 409) {
-          toast.error('Document name already exists in this phase/type path');
+          const msg = 'A document already exists at this path';
+          setRenamePathError(msg);
+          toast.error(msg);
         } else {
           toast.error(error.error || 'Failed to rename document');
         }
@@ -140,6 +250,11 @@ export function DocumentActions({
       toast.error('Title cannot be empty');
       return;
     }
+    const pErr = saveAsCustomPath ? validatePathFormat(saveAsCustomPath) : null;
+    if (pErr) {
+      setSaveAsPathError(pErr);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -151,6 +266,8 @@ export function DocumentActions({
           workspaceId,
           phase: saveAsPhase,
           type: saveAsType,
+          // Only send custom path if user explicitly edited it
+          ...(saveAsPathEdited && saveAsCustomPath ? { path: saveAsCustomPath } : {}),
         }),
       });
 
@@ -162,7 +279,9 @@ export function DocumentActions({
       } else {
         const error = await res.json();
         if (res.status === 409) {
-          toast.error('Document name already exists in this phase/type path');
+          const msg = 'A document already exists at this path';
+          setSaveAsPathError(msg);
+          toast.error(msg);
         } else {
           toast.error(error.error || 'Failed to save as new document');
         }
@@ -201,15 +320,17 @@ export function DocumentActions({
   return (
     <>
       {/* GitHub Sync inline button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setShowGitHubSync(true)}
-        className="gap-1.5 rounded-xl border border-white/10 bg-white/5 text-slate-200 shadow-sm transition-all hover:border-purple-400/40 hover:bg-white/10 hover:text-white hover:shadow-purple-500/20"
-      >
-        <Github className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">GitHub Sync</span>
-      </Button>
+      {canUseGitHubSync && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowGitHubSync(true)}
+          className="gap-1.5 rounded-xl border border-white/10 bg-white/5 text-slate-200 shadow-sm transition-all hover:border-purple-400/40 hover:bg-white/10 hover:text-white hover:shadow-purple-500/20"
+        >
+          <Github className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">GitHub Sync</span>
+        </Button>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -257,7 +378,7 @@ export function DocumentActions({
           <DialogHeader>
             <DialogTitle className="text-white">Rename Document</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Update title, phase, and type. Path updates automatically.
+              Update title, phase, and type. Path updates automatically unless customized.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -267,7 +388,7 @@ export function DocumentActions({
             <Input
               id="new-title"
               value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
+              onChange={(e) => handleRenameTitleChange(e.target.value)}
               placeholder="Enter new title"
               className="mt-2 border-white/10 bg-slate-950/70 text-white placeholder:text-slate-500 focus:border-purple-500/60"
               onKeyDown={(e) => {
@@ -282,7 +403,7 @@ export function DocumentActions({
                 <Label className="text-slate-300">Phase</Label>
                 <Select
                   value={newPhase}
-                  onValueChange={(value) => setNewPhase(value as DocumentPhase)}
+                  onValueChange={(value) => handleRenamePhaseChange(value as DocumentPhase)}
                 >
                   <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
                     <SelectValue placeholder="Select phase" />
@@ -300,7 +421,7 @@ export function DocumentActions({
                 <Label className="text-slate-300">Type</Label>
                 <Select
                   value={newType}
-                  onValueChange={(value) => setNewType(value as DocumentType)}
+                  onValueChange={(value) => handleRenameTypeChange(value as DocumentType)}
                 >
                   <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
                     <SelectValue placeholder="Select type" />
@@ -317,12 +438,36 @@ export function DocumentActions({
             </div>
 
             <div>
-              <Label className="text-slate-300">Updated Path</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-slate-300">Path</Label>
+                {renamePathEdited && (
+                  <button
+                    type="button"
+                    onClick={resetRenamePath}
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset to auto
+                  </button>
+                )}
+              </div>
               <Input
-                value={buildPathPreview(newPhase, newType, newTitle)}
-                readOnly
-                className="mt-2 border-white/10 bg-slate-950/50 text-slate-300"
+                value={renameCustomPath}
+                onChange={(e) => handleRenamePathChange(e.target.value)}
+                placeholder="/your/custom/path"
+                className={`mt-2 border-white/10 bg-slate-950/70 font-mono text-sm text-white placeholder:text-slate-500 focus:border-purple-500/60 ${
+                  renamePathEdited ? 'border-purple-500/50' : ''
+                } ${renamePathError ? 'border-red-500/60' : ''}`}
               />
+              {renamePathError ? (
+                <p className="mt-1 text-xs text-red-400">{renamePathError}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">
+                  {renamePathEdited
+                    ? `GitHub: ${renameCustomPath.replace(/^\/+/, '')}.md`
+                    : 'Auto-generated from phase, type, and title'}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -336,7 +481,7 @@ export function DocumentActions({
             </Button>
             <Button
               onClick={handleRename}
-              disabled={loading}
+              disabled={loading || !!renamePathError}
               className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -362,7 +507,7 @@ export function DocumentActions({
             <Input
               id="save-as-title"
               value={saveAsTitle}
-              onChange={(e) => setSaveAsTitle(e.target.value)}
+              onChange={(e) => handleSaveAsTitleChange(e.target.value)}
               placeholder="Enter title for copy"
               className="mt-2 border-white/10 bg-slate-950/70 text-white placeholder:text-slate-500 focus:border-purple-500/60"
               onKeyDown={(e) => {
@@ -377,7 +522,7 @@ export function DocumentActions({
                 <Label className="text-slate-300">Phase</Label>
                 <Select
                   value={saveAsPhase}
-                  onValueChange={(value) => setSaveAsPhase(value as DocumentPhase)}
+                  onValueChange={(value) => handleSaveAsPhaseChange(value as DocumentPhase)}
                 >
                   <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
                     <SelectValue placeholder="Select phase" />
@@ -395,7 +540,7 @@ export function DocumentActions({
                 <Label className="text-slate-300">Type</Label>
                 <Select
                   value={saveAsType}
-                  onValueChange={(value) => setSaveAsType(value as DocumentType)}
+                  onValueChange={(value) => handleSaveAsTypeChange(value as DocumentType)}
                 >
                   <SelectTrigger className="mt-2 border-white/10 bg-slate-950/70 text-white focus:ring-purple-500/60">
                     <SelectValue placeholder="Select type" />
@@ -412,12 +557,36 @@ export function DocumentActions({
             </div>
 
             <div>
-              <Label className="text-slate-300">New Path</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-slate-300">Path</Label>
+                {saveAsPathEdited && (
+                  <button
+                    type="button"
+                    onClick={resetSaveAsPath}
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset to auto
+                  </button>
+                )}
+              </div>
               <Input
-                value={buildPathPreview(saveAsPhase, saveAsType, saveAsTitle)}
-                readOnly
-                className="mt-2 border-white/10 bg-slate-950/50 text-slate-300"
+                value={saveAsCustomPath}
+                onChange={(e) => handleSaveAsPathChange(e.target.value)}
+                placeholder="/your/custom/path"
+                className={`mt-2 border-white/10 bg-slate-950/70 font-mono text-sm text-white placeholder:text-slate-500 focus:border-purple-500/60 ${
+                  saveAsPathEdited ? 'border-purple-500/50' : ''
+                } ${saveAsPathError ? 'border-red-500/60' : ''}`}
               />
+              {saveAsPathError ? (
+                <p className="mt-1 text-xs text-red-400">{saveAsPathError}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">
+                  {saveAsPathEdited
+                    ? `GitHub: ${saveAsCustomPath.replace(/^\/+/, '')}.md`
+                    : 'Auto-generated from phase, type, and title'}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -431,7 +600,7 @@ export function DocumentActions({
             </Button>
             <Button
               onClick={handleSaveAs}
-              disabled={loading}
+              disabled={loading || !!saveAsPathError}
               className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-500/30"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -509,13 +678,15 @@ export function DocumentActions({
       </Dialog>
 
       {/* GitHub Sync Dialog */}
-      <DocumentGitHubSync
-        documentId={documentId}
-        workspaceId={workspaceId}
-        documentTitle={documentTitle}
-        open={showGitHubSync}
-        onOpenChange={setShowGitHubSync}
-      />
+      {canUseGitHubSync && (
+        <DocumentGitHubSync
+          documentId={documentId}
+          workspaceId={workspaceId}
+          documentTitle={documentTitle}
+          open={showGitHubSync}
+          onOpenChange={setShowGitHubSync}
+        />
+      )}
     </>
   );
 }

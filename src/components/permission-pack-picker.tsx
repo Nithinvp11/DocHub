@@ -14,8 +14,6 @@ import {
   type WorkspacePermission,
   WORKSPACE_PERMISSION_OPTIONS,
 } from '@/lib/workspace-permission-definitions';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
 interface PermissionPackPickerProps {
   selectedPermissions: string[];
   onChange: (permissions: string[]) => void;
@@ -76,13 +74,12 @@ export function PermissionPackPicker({
   const currentPermissions = expandPermissionPacks(selectedPermissions);
   const selectedPacks = getSelectedPacks(currentPermissions);
 
-  // Filter packs based on available permissions
+  // Filter packs so users only see permissions they can actually assign.
   const availablePacks = isOwner
     ? PERMISSION_PACK_DEFINITIONS
     : (PERMISSION_PACK_DEFINITIONS.map((pack) => {
         if (!availablePermissions) return pack;
 
-        // Filter pack permissions to only those available to current user
         const availablePerms = pack.permissions.filter((perm) =>
           availablePermissions.includes(perm)
         );
@@ -91,7 +88,6 @@ export function PermissionPackPicker({
           ? {
               ...pack,
               permissions: availablePerms,
-              isPartial: availablePerms.length < pack.permissions.length,
             }
           : null;
       }).filter(Boolean) as typeof PERMISSION_PACK_DEFINITIONS);
@@ -151,7 +147,6 @@ export function PermissionPackPicker({
           const isSelected = selectedPacks.includes(pack.id);
           const isExpanded = expandedPack === pack.id;
           const colors = COLOR_CLASSES[pack.color] || COLOR_CLASSES['slate'];
-          const isPartial = 'isPartial' in pack && pack.isPartial;
 
           return (
             <div
@@ -194,23 +189,6 @@ export function PermissionPackPicker({
                       >
                         {pack.permissions.length} perm{pack.permissions.length !== 1 ? 's' : ''}
                       </Badge>
-                      {isPartial ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge
-                                variant="outline"
-                                className="border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400"
-                              >
-                                Limited
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs text-xs">Limited by your permissions</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : null}
                     </div>
 
                     {/* Brief description - only show when not selected */}
@@ -254,7 +232,7 @@ export function PermissionPackPicker({
                         return (
                           <div key={permId} className="flex items-start gap-2 text-xs">
                             <div
-                              className={`mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${colors.text.replace('text-', 'bg-')}`}
+                              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${colors.text.replace('text-', 'bg-')}`}
                             />
                             <div className="flex-1 leading-snug">
                               <span className="font-medium text-slate-200">{permOption.label}</span>

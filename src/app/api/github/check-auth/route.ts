@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/session';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { resolveWorkspaceGitHubAuth } from '@/lib/github-workspace-auth';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -25,21 +26,17 @@ export async function GET(req: NextRequest) {
 
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_VIEW);
 
-    // Check if user has GitHub auth for this workspace
-    const githubAuth = await prisma.gitHubAuth.findFirst({
-      where: {
-        userId: user.id,
-        workspaceId: workspaceId,
-      },
-      select: {
-        id: true,
-        createdAt: true,
-      },
-    });
+    // Check if the workspace has any GitHub auth connected (current user preferred, then owner, then any member)
+    const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, user.id);
 
     return NextResponse.json({
       connected: !!githubAuth,
       connectedAt: githubAuth?.createdAt || null,
+      // Indicate whether the current user personally has GitHub connected
+      selfConnected: !!(await prisma.gitHubAuth.findUnique({
+        where: { userId_workspaceId: { userId: user.id, workspaceId } },
+        select: { id: true },
+      })),
     });
   } catch (error) {
     if (error instanceof WorkspacePermissionError) {

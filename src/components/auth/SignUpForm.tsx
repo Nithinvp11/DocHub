@@ -39,7 +39,11 @@ export function SignUpForm({ onSwitchToSignIn }: SignUpFormProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; username?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    username?: string;
+    name?: string;
+  }>({});
   const emailRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +98,13 @@ export function SignUpForm({ onSwitchToSignIn }: SignUpFormProps) {
       return;
     }
 
+    const trimmedName = formData.name.trim();
+    if (trimmedName && !/^[A-Za-z\s]+$/.test(trimmedName)) {
+      setError('Full name can only contain letters and spaces');
+      setFieldErrors({ name: 'Full name can only contain letters and spaces' });
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -128,6 +139,8 @@ export function SignUpForm({ onSwitchToSignIn }: SignUpFormProps) {
           emailRef.current?.focus();
         } else if (lower.includes('username')) {
           setFieldErrors({ username: msg });
+        } else if (lower.includes('name')) {
+          setFieldErrors({ name: msg });
         } else {
           setError(msg);
         }
@@ -256,10 +269,13 @@ export function SignUpForm({ onSwitchToSignIn }: SignUpFormProps) {
               type="text"
               value={formData.name}
               onChange={handleChange}
+              pattern="[A-Za-z ]+"
               className="w-full rounded-xl border border-slate-700/50 bg-slate-900/60 py-3.5 pr-4 pl-12 text-white placeholder-slate-500 backdrop-blur-xl transition-all duration-200 hover:border-slate-600/50 focus:border-purple-500/50 focus:bg-slate-900/80 focus:ring-4 focus:ring-purple-500/20 focus:outline-none"
               placeholder="John Doe"
             />
           </div>
+          {fieldErrors.name && <p className="mt-2 text-sm text-red-400">{fieldErrors.name}</p>}
+          <p className="text-xs text-slate-400">Letters and spaces only</p>
         </motion.div>
 
         {/* Email Input */}

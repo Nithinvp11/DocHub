@@ -168,13 +168,6 @@ export function DeleteAccountModal({ open, onOpenChange, userEmail }: DeleteAcco
                 </div>
               </div>
 
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                <p className="text-sm text-amber-200">
-                  💡 <strong>Alternative:</strong> You can temporarily deactivate your account
-                  instead. Contact support for assistance.
-                </p>
-              </div>
-
               <div className="flex gap-3">
                 <Button
                   type="button"

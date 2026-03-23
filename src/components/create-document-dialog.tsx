@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -23,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, RotateCcw } from 'lucide-react';
 
 const toSlug = (value: string) =>
   value
@@ -31,10 +30,29 @@ const toSlug = (value: string) =>
     .trim()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-const buildPathPreview = (phase: string, type: string, title: string) =>
-  `/${toSlug(phase)}/${toSlug(type)}/${toSlug(title)}`;
+const buildAutoPath = (phase: string, type: string, title: string) => {
+  const p = toSlug(phase);
+  const t = toSlug(type);
+  const ti = toSlug(title);
+  if (!ti) return '';
+  return `/${p}/${t}/${ti}`;
+};
+
+const validatePathFormat = (path: string): string | null => {
+  if (!path || path === '/') return 'Path cannot be empty';
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length === 0) return 'Path cannot be empty';
+  if (segments.length > 10) return 'Path cannot have more than 10 segments';
+  for (const seg of segments) {
+    if (seg.length > 100) return `Segment "${seg}" exceeds 100 characters`;
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(seg))
+      return `Invalid segment "${seg}": use lowercase letters, numbers, and hyphens`;
+  }
+  return null;
+};
 
 interface CreateDocumentDialogProps {
   workspaceId: string;
@@ -56,6 +74,9 @@ export function CreateDocumentDialog({
     phase: 'PLANNING',
     type: 'GENERAL',
   });
+  const [customPath, setCustomPath] = useState('');
+  const [pathEdited, setPathEdited] = useState(false);
+  const [pathError, setPathError] = useState<string | null>(null);
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -64,13 +85,56 @@ export function CreateDocumentDialog({
       onOpenChange?.(value);
       return;
     }
-
     setInternalOpen(value);
+  };
+
+  // Auto-update path when title/phase/type changes (only when not edited manually)
+  useEffect(() => {
+    if (!pathEdited) {
+      setCustomPath(buildAutoPath(formData.phase, formData.type, formData.title));
+    }
+  }, [formData.title, formData.phase, formData.type, pathEdited]);
+
+  const handlePathChange = (value: string) => {
+    setPathEdited(true);
+    setCustomPath(value);
+    // Validate live but only show error after user types a real path
+    if (value && value !== '/') {
+      setPathError(validatePathFormat(value));
+    } else {
+      setPathError(null);
+    }
+  };
+
+  const resetPath = () => {
+    setPathEdited(false);
+    setPathError(null);
+    setCustomPath(buildAutoPath(formData.phase, formData.type, formData.title));
+  };
+
+  const handleOpenChange = (value: boolean) => {
+    setOpen(value);
+    if (!value) {
+      // Reset form on close
+      setFormData({ title: '', phase: 'PLANNING', type: 'GENERAL' });
+      setCustomPath('');
+      setPathEdited(false);
+      setPathError(null);
+      setError('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate path before submitting
+    const pErr = customPath ? validatePathFormat(customPath) : null;
+    if (pErr) {
+      setPathError(pErr);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -80,7 +144,9 @@ export function CreateDocumentDialog({
         body: JSON.stringify({
           ...formData,
           workspaceId,
-          content: '', // Start with blank content
+          content: '',
+          // Only send path if user explicitly set one
+          ...(pathEdited && customPath ? { path: customPath } : {}),
         }),
       });
 
@@ -88,8 +154,10 @@ export function CreateDocumentDialog({
 
       if (!response.ok) {
         if (response.status === 409) {
-          setError('Document name already exists in this phase/type path');
-          toast.error('Document name already exists in this phase/type path');
+          const msg = 'A document already exists at this path';
+          setError(msg);
+          setPathError(msg);
+          toast.error(msg);
         } else {
           setError(data.error || 'Failed to create document');
           toast.error(data.error || 'Failed to create document');
@@ -98,8 +166,7 @@ export function CreateDocumentDialog({
       }
 
       toast.success('Document created successfully!');
-      setOpen(false);
-      setFormData({ title: '', phase: 'PLANNING', type: 'GENERAL' });
+      handleOpenChange(false);
       if (data?.id) {
         router.push(`/dashboard/${workspaceId}/documents/${data.id}`);
       } else {
@@ -114,7 +181,7 @@ export function CreateDocumentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {!isControlled && (
         <DialogTrigger asChild>
           <Button className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700">
@@ -197,27 +264,62 @@ export function CreateDocumentDialog({
                 </Select>
               </div>
             </div>
+
+            {/* Custom path field */}
             <div className="grid gap-2">
-              <Label className="text-white">Path Preview</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="custom-path" className="text-white">
+                  Document Path
+                </Label>
+                {pathEdited && (
+                  <button
+                    type="button"
+                    onClick={resetPath}
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset to auto
+                  </button>
+                )}
+              </div>
               <Input
-                value={buildPathPreview(formData.phase, formData.type, formData.title)}
-                readOnly
-                className="border-white/20 bg-white/5 text-slate-300"
+                id="custom-path"
+                placeholder="/onboarding/my-sop"
+                value={customPath}
+                onChange={(e) => handlePathChange(e.target.value)}
+                className={`border-white/20 bg-white/5 font-mono text-sm text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 ${
+                  pathEdited ? 'border-purple-500/50' : ''
+                } ${pathError ? 'border-red-500/60' : ''}`}
               />
+              {pathError ? (
+                <p className="text-xs text-red-400">{pathError}</p>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  {pathEdited
+                    ? 'Custom path — also used as GitHub file path'
+                    : 'Auto-generated from phase, type, and title'}
+                </p>
+              )}
+              {customPath && !pathError && (
+                <p className="font-mono text-xs text-slate-500">
+                  GitHub: {customPath.replace(/^\/+/, '')}.md
+                </p>
+              )}
             </div>
+
             {error && <div className="text-sm text-red-400">{error}</div>}
           </div>
           <DialogFooter>
             <Button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               className="border-white/20 bg-white/5 text-white hover:bg-white/10"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!pathError}
               className="bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:from-purple-700 hover:to-fuchsia-700"
             >
               {loading ? 'Creating...' : 'Create Document'}

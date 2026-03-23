@@ -28,6 +28,7 @@ interface WorkspaceActionsProps {
   workspaceId: string;
   workspaceName: string;
   workspaceDescription: string | null;
+  workspaceMemberLimit: number | null;
   isOwner: boolean;
   canManage: boolean;
 }
@@ -36,6 +37,7 @@ export function WorkspaceActions({
   workspaceId,
   workspaceName,
   workspaceDescription,
+  workspaceMemberLimit,
   isOwner,
   canManage,
 }: WorkspaceActionsProps) {
@@ -46,6 +48,9 @@ export function WorkspaceActions({
 
   const [name, setName] = useState(workspaceName);
   const [description, setDescription] = useState(workspaceDescription || '');
+  const [memberLimit, setMemberLimit] = useState(
+    workspaceMemberLimit === null ? '' : workspaceMemberLimit.toString()
+  );
 
   const canEdit = isOwner || canManage;
   const canDelete = isOwner;
@@ -56,12 +61,25 @@ export function WorkspaceActions({
       return;
     }
 
+    const trimmedMemberLimit = memberLimit.trim();
+    if (trimmedMemberLimit !== '') {
+      const parsedLimit = Number.parseInt(trimmedMemberLimit, 10);
+      if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+        toast.error('Member limit must be a whole number greater than or equal to 1');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description: description || null }),
+        body: JSON.stringify({
+          name,
+          description: description || null,
+          memberLimit: trimmedMemberLimit === '' ? null : Number.parseInt(trimmedMemberLimit, 10),
+        }),
       });
 
       if (res.ok) {
@@ -158,7 +176,7 @@ export function WorkspaceActions({
           <DialogHeader>
             <DialogTitle className="text-white">Edit Workspace</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Update workspace name and description
+              Update workspace name, description, and member limit
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -186,6 +204,24 @@ export function WorkspaceActions({
                 rows={3}
                 className="border-white/20 bg-white/5 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="member-limit" className="text-white">
+                Member Limit (optional)
+              </Label>
+              <Input
+                id="member-limit"
+                type="number"
+                min={1}
+                step={1}
+                value={memberLimit}
+                onChange={(e) => setMemberLimit(e.target.value)}
+                placeholder="Leave empty for unlimited"
+                className="border-white/20 bg-white/5 text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
+              />
+              <p className="text-xs text-slate-400">
+                Set an upper bound for joined members in this workspace.
+              </p>
             </div>
           </div>
           <DialogFooter>

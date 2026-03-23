@@ -5,6 +5,7 @@ import { Octokit } from '@octokit/rest';
 import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
 import { decryptToken } from '@/lib/encryption';
+import { resolveWorkspaceGitHubAuth } from '@/lib/github-workspace-auth';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -48,10 +49,8 @@ export async function GET(req: NextRequest) {
 
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_VIEW);
 
-    // Get GitHub auth
-    const githubAuth = await prisma.gitHubAuth.findUnique({
-      where: { userId_workspaceId: { userId: user.id, workspaceId } },
-    });
+    // Get GitHub auth — falls back to owner or any connected workspace member
+    const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, user.id);
 
     if (!githubAuth) {
       return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 });
@@ -160,10 +159,8 @@ async function switchBranch(data: BranchData, userId: string) {
     return NextResponse.json({ error: 'Document not synced with GitHub' }, { status: 400 });
   }
 
-  // Get GitHub auth
-  const githubAuth = await prisma.gitHubAuth.findUnique({
-    where: { userId_workspaceId: { userId, workspaceId } },
-  });
+  // Get GitHub auth — falls back to owner or any connected workspace member
+  const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, userId);
 
   if (!githubAuth) {
     return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 });
@@ -233,10 +230,8 @@ async function createBranch(data: BranchData, userId: string) {
     return NextResponse.json({ error: 'Document not synced with GitHub' }, { status: 400 });
   }
 
-  // Get GitHub auth
-  const githubAuth = await prisma.gitHubAuth.findUnique({
-    where: { userId_workspaceId: { userId, workspaceId } },
-  });
+  // Get GitHub auth — falls back to owner or any connected workspace member
+  const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, userId);
 
   if (!githubAuth) {
     return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 });
@@ -309,10 +304,8 @@ async function compareBranches(data: BranchData, userId: string) {
     return NextResponse.json({ error: 'Document not synced with GitHub' }, { status: 400 });
   }
 
-  // Get GitHub auth
-  const githubAuth = await prisma.gitHubAuth.findUnique({
-    where: { userId_workspaceId: { userId, workspaceId } },
-  });
+  // Get GitHub auth — falls back to owner or any connected workspace member
+  const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, userId);
 
   if (!githubAuth) {
     return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 });

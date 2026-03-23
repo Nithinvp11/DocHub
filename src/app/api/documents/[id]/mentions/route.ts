@@ -92,7 +92,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const body = await request.json();
     const { userId, position } = createMentionSchema.parse(body);
 
-    // Verify mentioned user exists and has access to workspace
+    // Verify mentioned user exists and has access to workspace (either as member or owner)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: document.workspaceId },
+      select: { ownerId: true },
+    });
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+    }
+
+    const isOwner = workspace.ownerId === userId;
     const mentionedUserMembership = await prisma.workspaceMember.findUnique({
       where: {
         workspaceId_userId: {
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
 
-    if (!mentionedUserMembership) {
+    if (!isOwner && !mentionedUserMembership) {
       return NextResponse.json({ error: 'Mentioned user not found in workspace' }, { status: 400 });
     }
 

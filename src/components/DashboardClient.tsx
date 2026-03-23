@@ -3,9 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { GlassCard } from '@/components/ui/glass-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { CreateWorkspaceDialog } from '@/components/create-workspace-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   FileText,
   Users,
@@ -96,12 +105,14 @@ const SORT_OPTIONS: { value: SortOption; label: string; icon: React.ReactNode }[
 ];
 
 export function DashboardClient({ workspaces, recentActivity, userId }: DashboardClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('updated-desc');
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<RecentActivityItem | null>(null);
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<string, boolean>>({});
 
   // Close sort dropdown when clicking outside
@@ -467,8 +478,12 @@ export function DashboardClient({ workspaces, recentActivity, userId }: Dashboar
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
                       >
-                        <div className="group block">
-                          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 transition-all hover:border-purple-500/30 hover:bg-slate-900/60 hover:shadow-lg hover:shadow-purple-500/10">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedActivity(activity)}
+                          className="group block w-full text-left"
+                        >
+                          <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 transition-all hover:border-purple-500/30 hover:bg-slate-900/60 hover:shadow-lg hover:shadow-purple-500/10 focus-visible:ring-2 focus-visible:ring-purple-500/40 focus-visible:outline-none">
                             <div className="mb-3 flex items-start gap-3">
                               {/* Action Icon */}
                               <motion.div
@@ -500,11 +515,15 @@ export function DashboardClient({ workspaces, recentActivity, userId }: Dashboar
                                   </span>
                                   <span>•</span>
                                   <span>{timeAgo}</span>
+                                  <span>•</span>
+                                  <span className="text-purple-400 group-hover:text-purple-300">
+                                    View details
+                                  </span>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       </motion.div>
                     );
                   })}
@@ -535,6 +554,111 @@ export function DashboardClient({ workspaces, recentActivity, userId }: Dashboar
             )}
           </div>
         </GlassCard>
+
+        <Dialog
+          open={Boolean(selectedActivity)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedActivity(null);
+            }
+          }}
+        >
+          <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden border-white/10 bg-slate-950 p-0 text-slate-100 sm:max-w-2xl">
+            {selectedActivity && (
+              <>
+                <DialogHeader className="border-b border-white/10 px-6 pt-6 pb-4">
+                  <DialogTitle className="pr-8 text-xl text-white">
+                    {getActivitySummary(selectedActivity)}
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    {formatActivityType(selectedActivity.type)} •{' '}
+                    {getTimeAgo(new Date(selectedActivity.createdAt))}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 overflow-y-auto px-6 pb-6">
+                  <div className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-300">
+                    {getActivityDetail(selectedActivity) ||
+                      'No additional detail was recorded for this activity.'}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                      <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                        Workspace
+                      </p>
+                      <p className="mt-1 text-sm text-slate-200">
+                        {selectedActivity.workspace?.name ||
+                          selectedActivity.workspaceName ||
+                          'Deleted workspace'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                      <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                        Actor
+                      </p>
+                      <p className="mt-1 text-sm text-slate-200">
+                        {selectedActivity.actorName ||
+                          selectedActivity.actorEmail ||
+                          'Unknown user'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                      <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                        Entity Type
+                      </p>
+                      <p className="mt-1 text-sm break-all text-slate-200">
+                        {selectedActivity.entityType}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                      <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                        Entity ID
+                      </p>
+                      <p className="mt-1 text-sm break-all text-slate-200">
+                        {selectedActivity.entityId}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                    <p className="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Metadata
+                    </p>
+                    <div className="max-h-[35vh] overflow-y-auto pr-1">
+                      {renderActivityMetadata(selectedActivity.metadata)}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const path = getActivityNavigationPath(selectedActivity);
+                        if (!path) {
+                          toast.info('No dedicated page is available for this activity yet.');
+                          return;
+                        }
+                        setSelectedActivity(null);
+                        router.push(path);
+                      }}
+                      className="rounded-lg border border-purple-500/40 bg-purple-500/15 px-3 py-2 text-sm font-semibold text-purple-300 transition-colors hover:bg-purple-500/25"
+                    >
+                      Open related page
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedActivity(null)}
+                      className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/10"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );
@@ -560,16 +684,57 @@ function getActivityIcon(type: string) {
   const className = 'h-4 w-4 text-white';
 
   switch (type) {
+    case 'WORKSPACE_CREATED':
+      return <FileIcon className={className} />;
+    case 'WORKSPACE_DELETED':
+      return <Trash2 className={className} />;
     case 'DOCUMENT_DELETED':
       return <Trash2 className={className} />;
+    case 'COMMENT_ADDED':
+    case 'COMMENT_RESOLVED':
+      return <FileText className={className} />;
     case 'GITHUB_IMPORT':
       return <Download className={className} />;
     case 'GITHUB_EXPORT':
       return <Upload className={className} />;
+    case 'GITHUB_PR_OPENED':
+    case 'GITHUB_PR_UPDATED':
+    case 'GITHUB_PR_MERGED':
+    case 'GITHUB_PR_CLOSED':
+    case 'GITHUB_PULL_REQUEST_CREATED':
+      return <Upload className={className} />;
+    case 'GITHUB_ISSUE_OPENED':
+    case 'GITHUB_ISSUE_UPDATED':
+    case 'GITHUB_ISSUE_CLOSED':
+      return <Download className={className} />;
+    case 'GITHUB_REPO_CONNECTED':
+    case 'GITHUB_REPO_DISCONNECTED':
+    case 'GITHUB_REPO_SYNCED':
+    case 'GITHUB_SYNC_STARTED':
+    case 'GITHUB_SYNC_SUCCESS':
+    case 'GITHUB_SYNC_FAILED':
+    case 'GITHUB_CONFLICT_DETECTED':
+      return <ArrowUpDown className={className} />;
     case 'MEMBER_ADDED':
+    case 'MEMBER_INVITED':
+    case 'INVITE_SENT':
+    case 'INVITE_RESENT':
+    case 'INVITE_ACCEPTED':
+    case 'INVITE_REJECTED':
       return <UserPlus className={className} />;
     case 'MEMBER_REMOVED':
+    case 'INVITE_CANCELLED':
       return <UserMinus className={className} />;
+    case 'OWNERSHIP_TRANSFERRED':
+      return <Users className={className} />;
+    case 'TAG_ADDED':
+    case 'TAG_REMOVED':
+    case 'DOCUMENT_LINKED':
+    case 'DOCUMENT_MENTIONED':
+    case 'DOCUMENT_STATUS_CHANGED':
+    case 'PASSWORD_CHANGED':
+    case 'ACCOUNT_DELETED':
+      return <Edit className={className} />;
     case 'VERSION_CREATED':
       return <Clock className={className} />;
     case 'DOCUMENT_UPDATED':
@@ -587,6 +752,8 @@ function getActivitySummary(activity: RecentActivityItem): string {
   const metadata = activity.metadata || {};
 
   switch (activity.type) {
+    case 'WORKSPACE_CREATED':
+      return `Created ${String(metadata.workspaceName || activity.workspaceName || 'a workspace')}`;
     case 'DOCUMENT_CREATED':
       return `Created ${String(metadata.title || 'a document')}`;
     case 'DOCUMENT_UPDATED':
@@ -595,16 +762,77 @@ function getActivitySummary(activity: RecentActivityItem): string {
       return `Deleted ${String(metadata.title || 'a document')}`;
     case 'VERSION_CREATED':
       return 'Created a version';
+    case 'COMMENT_ADDED':
+      return 'Added a comment';
+    case 'COMMENT_RESOLVED':
+      return 'Resolved a comment';
     case 'MEMBER_ADDED':
       return `Added ${String(metadata.userName || metadata.userEmail || metadata.memberUserName || 'a member')}`;
     case 'MEMBER_REMOVED':
       return `Removed ${String(metadata.removedUserName || metadata.removedUserEmail || 'a member')}`;
+    case 'MEMBER_INVITED':
+    case 'INVITE_SENT':
+      return `Invited ${String(metadata.userName || metadata.userEmail || metadata.email || 'a member')}`;
+    case 'INVITE_RESENT':
+      return `Resent invite to ${String(metadata.userName || metadata.userEmail || metadata.email || 'a member')}`;
+    case 'INVITE_CANCELLED':
+      return `Cancelled invite for ${String(metadata.userName || metadata.userEmail || metadata.email || 'a member')}`;
+    case 'INVITE_ACCEPTED':
+      return `${String(metadata.userName || metadata.userEmail || 'A member')} accepted an invite`;
+    case 'INVITE_REJECTED':
+      return `${String(metadata.userName || metadata.userEmail || 'A member')} rejected an invite`;
     case 'GITHUB_IMPORT':
       return `Imported from ${String(metadata.repoName || metadata.repository || 'GitHub')}`;
     case 'GITHUB_EXPORT':
       return `Exported to ${String(metadata.repoName || metadata.repository || 'GitHub')}`;
+    case 'GITHUB_REPO_CONNECTED':
+      return `Connected repository ${String(metadata.repoName || metadata.repository || 'GitHub')}`;
+    case 'GITHUB_REPO_DISCONNECTED':
+      return `Disconnected repository ${String(metadata.repoName || metadata.repository || 'GitHub')}`;
+    case 'GITHUB_REPO_SYNCED':
+      return `Synced ${String(metadata.repoName || metadata.repository || 'GitHub repository')}`;
+    case 'GITHUB_SYNC_STARTED':
+      return 'Started GitHub sync';
+    case 'GITHUB_SYNC_SUCCESS':
+      return 'GitHub sync completed';
+    case 'GITHUB_SYNC_FAILED':
+      return 'GitHub sync failed';
+    case 'GITHUB_CONFLICT_DETECTED':
+      return 'GitHub conflict detected';
+    case 'GITHUB_PR_OPENED':
+      return `Opened PR #${String(metadata.prNumber || activity.entityId || '?')}`;
+    case 'GITHUB_PR_UPDATED':
+      return `Updated PR #${String(metadata.prNumber || activity.entityId || '?')}`;
+    case 'GITHUB_PR_MERGED':
+      return `Merged PR #${String(metadata.prNumber || activity.entityId || '?')}`;
+    case 'GITHUB_PR_CLOSED':
+      return `Closed PR #${String(metadata.prNumber || activity.entityId || '?')}`;
+    case 'GITHUB_PULL_REQUEST_CREATED':
+      return `Created PR #${String(metadata.prNumber || activity.entityId || '?')}`;
+    case 'GITHUB_ISSUE_OPENED':
+      return `Opened issue #${String(metadata.issueNumber || activity.entityId || '?')}`;
+    case 'GITHUB_ISSUE_UPDATED':
+      return `Updated issue #${String(metadata.issueNumber || activity.entityId || '?')}`;
+    case 'GITHUB_ISSUE_CLOSED':
+      return `Closed issue #${String(metadata.issueNumber || activity.entityId || '?')}`;
+    case 'OWNERSHIP_TRANSFERRED':
+      return 'Transferred workspace ownership';
+    case 'DOCUMENT_LINKED':
+      return 'Linked documents';
+    case 'DOCUMENT_MENTIONED':
+      return 'Mentioned a document';
+    case 'DOCUMENT_STATUS_CHANGED':
+      return `Changed document status to ${String(metadata.status || metadata.to || 'new status')}`;
+    case 'TAG_ADDED':
+      return `Added tag ${String(metadata.tagName || metadata.tag || '')}`.trim();
+    case 'TAG_REMOVED':
+      return `Removed tag ${String(metadata.tagName || metadata.tag || '')}`.trim();
     case 'WORKSPACE_DELETED':
       return `Deleted ${String(metadata.workspaceName || activity.workspaceName || 'workspace')}`;
+    case 'PASSWORD_CHANGED':
+      return 'Changed account password';
+    case 'ACCOUNT_DELETED':
+      return 'Deleted account';
     default:
       return formatActivityType(activity.type);
   }
@@ -616,15 +844,146 @@ function getActivityDetail(activity: RecentActivityItem): string | null {
   switch (activity.type) {
     case 'VERSION_CREATED':
       return String(metadata.message || 'Saved a new version');
+    case 'COMMENT_ADDED':
+      return String(metadata.commentPreview || metadata.message || 'A comment was added');
+    case 'COMMENT_RESOLVED':
+      return String(metadata.commentPreview || metadata.message || 'A comment was resolved');
     case 'GITHUB_IMPORT':
       return `${String(metadata.filesImported || 0)} file(s) imported`;
     case 'GITHUB_EXPORT':
       return `${String(metadata.filesExported || 0)} file(s) exported`;
+    case 'GITHUB_REPO_SYNCED':
+      return `${String(metadata.syncedCount || 0)} item(s) synced`;
+    case 'GITHUB_SYNC_FAILED':
+      return String(metadata.error || metadata.reason || 'Sync failed');
+    case 'GITHUB_CONFLICT_DETECTED':
+      return String(
+        metadata.conflictSummary || metadata.message || 'Manual review may be required'
+      );
+    case 'GITHUB_PR_OPENED':
+    case 'GITHUB_PR_UPDATED':
+    case 'GITHUB_PR_MERGED':
+    case 'GITHUB_PR_CLOSED':
+    case 'GITHUB_PULL_REQUEST_CREATED':
+      return String(
+        metadata.title || metadata.repoName || metadata.repository || 'GitHub pull request activity'
+      );
+    case 'GITHUB_ISSUE_OPENED':
+    case 'GITHUB_ISSUE_UPDATED':
+    case 'GITHUB_ISSUE_CLOSED':
+      return String(
+        metadata.title || metadata.repoName || metadata.repository || 'GitHub issue activity'
+      );
+    case 'MEMBER_ADDED':
+    case 'MEMBER_REMOVED':
+      return `Total impacted members: ${String(metadata.removedMemberCount || 1)}`;
+    case 'OWNERSHIP_TRANSFERRED':
+      return String(
+        metadata.newOwnerName ||
+          metadata.newOwnerEmail ||
+          'Ownership was transferred to another member'
+      );
+    case 'DOCUMENT_STATUS_CHANGED':
+      return `${String(metadata.from || 'unknown')} -> ${String(metadata.to || 'unknown')}`;
+    case 'TAG_ADDED':
+      return String(metadata.documentTitle || metadata.title || 'Tag updated on document');
+    case 'TAG_REMOVED':
+      return String(metadata.documentTitle || metadata.title || 'Tag removed from document');
+    case 'MEMBER_INVITED':
+    case 'INVITE_SENT':
+    case 'INVITE_RESENT':
+    case 'INVITE_CANCELLED':
+    case 'INVITE_ACCEPTED':
+    case 'INVITE_REJECTED':
+      return String(metadata.email || metadata.userEmail || 'Invite lifecycle event');
     case 'WORKSPACE_DELETED':
       return `${String(metadata.documentsCount || 0)} document(s), ${String(metadata.membersCount || 0)} member(s)`;
     default:
+      if (metadata && Object.keys(metadata).length > 0) {
+        return 'Open to view full metadata details.';
+      }
       return null;
   }
+}
+
+function getActivityNavigationPath(activity: RecentActivityItem): string | null {
+  const metadata = activity.metadata || {};
+  const workspaceId = activity.workspace?.id || activity.workspaceId;
+
+  if (!workspaceId) {
+    return null;
+  }
+
+  if (['DOCUMENT_CREATED', 'DOCUMENT_UPDATED'].includes(activity.type) && activity.entityId) {
+    return `/dashboard/${workspaceId}/documents/${activity.entityId}`;
+  }
+
+  if (['VERSION_CREATED', 'COMMENT_ADDED', 'COMMENT_RESOLVED'].includes(activity.type)) {
+    const documentId = String(metadata.documentId || '');
+    if (documentId) {
+      return `/dashboard/${workspaceId}/documents/${documentId}`;
+    }
+  }
+
+  if (activity.type.startsWith('GITHUB_')) {
+    return `/dashboard/${workspaceId}/settings/github`;
+  }
+
+  if (
+    [
+      'MEMBER_ADDED',
+      'MEMBER_REMOVED',
+      'MEMBER_INVITED',
+      'INVITE_SENT',
+      'INVITE_RESENT',
+      'INVITE_CANCELLED',
+      'INVITE_ACCEPTED',
+      'INVITE_REJECTED',
+      'WORKSPACE_CREATED',
+      'OWNERSHIP_TRANSFERRED',
+    ].includes(activity.type)
+  ) {
+    return `/dashboard/${workspaceId}`;
+  }
+
+  return null;
+}
+
+function formatMetadataValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'N/A';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function renderActivityMetadata(metadata: Record<string, unknown> | null) {
+  if (!metadata || Object.keys(metadata).length === 0) {
+    return <p className="text-sm text-slate-400">No metadata recorded for this activity.</p>;
+  }
+
+  const entries = Object.entries(metadata);
+
+  return (
+    <div className="space-y-2">
+      {entries.map(([key, value]) => (
+        <div key={key} className="rounded-md bg-slate-950/50 p-2">
+          <p className="text-xs font-semibold text-slate-500">{key}</p>
+          <p className="mt-1 text-sm break-all text-slate-200">{formatMetadataValue(value)}</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function DashboardSkeleton() {

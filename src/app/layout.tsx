@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SkipNavigation } from '@/components/SkipNavigation';
-import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 // Temporarily disabled - causes memory issues during startup
@@ -61,7 +60,6 @@ export default function RootLayout({
             {children}
           </main>
           <Toaster position="top-right" richColors />
-          <KeyboardShortcutsModal />
         </AuthProvider>
       </body>
     </html>

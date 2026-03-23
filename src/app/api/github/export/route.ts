@@ -11,6 +11,7 @@ import { decryptToken } from '@/lib/encryption';
 import { exportToGitHub } from '@/lib/github-simple-export';
 import { ActivityTracker } from '@/lib/activity';
 import { getCurrentUser } from '@/lib/session';
+import { resolveWorkspaceGitHubAuth } from '@/lib/github-workspace-auth';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -54,17 +55,15 @@ export async function POST(req: NextRequest) {
     // Check permissions
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_EXPORT);
 
-    // Get GitHub auth token
-    const githubAuth = await prisma.gitHubAuth.findFirst({
-      where: {
-        userId: user.id,
-        workspaceId,
-      },
-    });
+    // Get GitHub auth token — falls back to owner or any connected workspace member
+    const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, user.id);
 
     if (!githubAuth) {
       return NextResponse.json(
-        { error: 'GitHub not connected. Please connect your GitHub account first.' },
+        {
+          error:
+            'No GitHub account is connected to this workspace. A member with GitHub permissions must connect a GitHub account in workspace GitHub settings.',
+        },
         { status: 400 }
       );
     }

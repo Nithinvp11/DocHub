@@ -13,6 +13,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { Callout } from '@/components/editor/CalloutExtension';
 import { Details, DetailsSummary, DetailsContent } from '@/components/editor/DetailsExtension';
+import { Mention } from '@/lib/tiptap/mention-extension';
 
 // Initialize lowlight with common languages
 const lowlight = createLowlight(common);
@@ -64,6 +65,9 @@ export const getTipTapExtensions = () => [
   Placeholder.configure({
     placeholder: 'Start writing your document...',
   }),
+
+  // Mentions (@user) rendered as colored inline tokens
+  Mention,
 
   // Advanced formatting - Callouts and collapsible sections
   Callout,

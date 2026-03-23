@@ -238,7 +238,7 @@ export default function AuthPage() {
                     transition={{ delay: 0.5 }}
                   >
                     Professional documentation platform with{' '}
-                    <span className="text-purple-300">Git-like versioning</span> and{' '}
+                    <span className="text-purple-300">versioning</span> and{' '}
                     <span className="text-fuchsia-300">GitHub integration</span>
                   </motion.p>
                 </div>

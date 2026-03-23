@@ -81,13 +81,15 @@ export default async function DashboardPage() {
     take: PAGINATION_LIMITS.WORKSPACES_PER_PAGE,
   });
 
-  // Get recent activity performed by this user across current and past workspaces (last 30 days)
+  // Get recent activity across all workspaces the user is a member of (last 30 days)
   const oneMonthAgo = new Date();
   oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
 
+  const memberWorkspaceIds = workspaces.map((ws) => ws.id);
+
   const recentActivity = await prisma.activity.findMany({
     where: {
-      actorId: session.user.id,
+      workspaceId: { in: memberWorkspaceIds },
       createdAt: {
         gte: oneMonthAgo,
       },

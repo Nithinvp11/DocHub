@@ -13,7 +13,14 @@ const registerSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, {
       message: 'Username can only contain letters, numbers, and underscores',
     }),
-  name: z.string().optional(),
+  name: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z\s]+$/, {
+      message: 'Full name can only contain letters and spaces',
+    })
+    .optional()
+    .or(z.literal('')),
   email: z.string().email(),
   password: z.string().min(8),
 });
@@ -56,8 +63,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: passwordValidation.errors.join(', ') }, { status: 400 });
     }
 
-    // Sanitize name
-    const sanitizedName = name ? sanitizeText(name) : '';
+    // Sanitize and normalize optional name
+    const sanitizedName = name ? sanitizeText(name).trim() : '';
 
     // Check if user already exists (email or username)
     const [existingUserByEmail, existingUserByUsername] = await Promise.all([
@@ -80,7 +87,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({
       data: {
         username,
-        name,
+        name: sanitizedName || null,
         email,
         password: hashedPassword,
       },

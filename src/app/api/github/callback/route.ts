@@ -4,7 +4,7 @@ import { exchangeCodeForToken, getAuthenticatedUser } from '@/lib/github';
 import { encryptToken } from '@/lib/encryption';
 import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
-import { assertPermission } from '@/lib/workspace-permissions';
+import { getWorkspaceAccess } from '@/lib/workspace-permissions';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -34,7 +34,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard?error=state_expired', req.url));
     }
 
-    await assertPermission(userId, workspaceId, WORKSPACE_PERMISSION.GITHUB_CONFIGURE);
+    const access = await getWorkspaceAccess(userId, workspaceId);
+    const hasGitHubAccess =
+      access.isOwner ||
+      access.permissions.some((permission) =>
+        [
+          WORKSPACE_PERMISSION.GITHUB_VIEW,
+          WORKSPACE_PERMISSION.GITHUB_IMPORT,
+          WORKSPACE_PERMISSION.GITHUB_EXPORT,
+          WORKSPACE_PERMISSION.GITHUB_CONFIGURE,
+        ].includes(permission)
+      );
+
+    if (!hasGitHubAccess) {
+      return NextResponse.redirect(new URL('/dashboard?error=missing_github_permission', req.url));
+    }
 
     // Exchange code for access token
     const tokenData = await exchangeCodeForToken(code);

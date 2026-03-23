@@ -105,8 +105,9 @@ export async function POST(
       return NextResponse.json({ error: 'Document not found in workspace' }, { status: 404 });
     }
 
-    // Update or create presence (use a socketId from session or generate one)
-    const socketId = user.id + '-' + Date.now(); // Simple socket ID for now
+    // Use a stable socketId per user+document so repeated heartbeats update the
+    // same row instead of creating a new one each time.
+    const socketId = `${user.id}-${documentId}`;
 
     const presence = await prisma.presence.upsert({
       where: {

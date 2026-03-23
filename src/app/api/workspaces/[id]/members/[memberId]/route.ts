@@ -239,7 +239,7 @@ export async function DELETE(
       return NextResponse.json({
         success: true,
         preview: true,
-        canCascade: isOwner,
+        canCascade: true,
         targetMemberId: targetMember.id,
         targetUserId: targetMember.userId,
         summary: {
@@ -248,20 +248,6 @@ export async function DELETE(
           pendingInvitesToCancel: pendingDelegatedInvitesCount,
         },
       });
-    }
-
-    if (!isOwner && (delegatedMembersCount > 0 || pendingDelegatedInvitesCount > 0)) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot remove this member while they still manage delegated members or pending invites. Reassign or remove delegated entities first.',
-          details: {
-            delegatedMembers: delegatedMembersCount,
-            delegatedPendingInvites: pendingDelegatedInvitesCount,
-          },
-        },
-        { status: 409 }
-      );
     }
 
     const usersToRemove = await prisma.user.findMany({
@@ -308,7 +294,7 @@ export async function DELETE(
           removedUserGrantedById: targetMember.grantedById,
           removedUserGrantRootId: targetMember.grantRootId,
           removedUserGrantDepth: targetMember.grantDepth,
-          cascadeRemoval: isOwner && delegatedMembersCount > 0,
+          cascadeRemoval: delegatedMembersCount > 0,
           removedMemberCount: memberIdsToRemoveList.length,
           removedDelegatedMemberCount: delegatedMembersCount,
           removedMemberIds: memberIdsToRemoveList,

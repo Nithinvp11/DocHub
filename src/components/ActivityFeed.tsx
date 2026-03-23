@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   FileText,
   MessageSquare,
@@ -63,6 +65,7 @@ export function ActivityFeed({
   showFilters = true,
   showSearch = true,
 }: ActivityFeedProps) {
+  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -363,7 +366,7 @@ export function ActivityFeed({
       case 'MEMBER_REMOVED':
         return (
           <>
-            <strong>{actorName}</strong> removed{' '}
+            <strong>{actorName}</strong> removed from workspace{' '}
             <span className="font-medium text-red-600">
               {String(metadata.removedUserName || metadata.removedUserEmail || 'a member')}
             </span>
@@ -391,6 +394,44 @@ export function ActivityFeed({
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const getActivityNavigationPath = (activity: Activity): string | null => {
+    const metadata = activity.metadata || {};
+
+    if (
+      ['DOCUMENT_CREATED', 'DOCUMENT_UPDATED', 'DOCUMENT_DELETED'].includes(activity.type) &&
+      activity.entityId
+    ) {
+      return `/dashboard/${workspaceId}/documents/${activity.entityId}`;
+    }
+
+    if (['VERSION_CREATED', 'COMMENT_ADDED', 'COMMENT_RESOLVED'].includes(activity.type)) {
+      const documentId = String(metadata.documentId || '');
+      if (documentId) {
+        return `/dashboard/${workspaceId}/documents/${documentId}`;
+      }
+    }
+
+    if (activity.type.startsWith('GITHUB_')) {
+      return `/dashboard/${workspaceId}/settings/github`;
+    }
+
+    if (['MEMBER_ADDED', 'MEMBER_REMOVED'].includes(activity.type)) {
+      return `/dashboard/${workspaceId}`;
+    }
+
+    return null;
+  };
+
+  const handleActivityClick = (activity: Activity) => {
+    const path = getActivityNavigationPath(activity);
+    if (!path) {
+      toast.info('No detail page available for this activity yet.');
+      return;
+    }
+
+    router.push(path);
   };
 
   const filteredActivities = filterActivities(activities);
@@ -515,7 +556,16 @@ export function ActivityFeed({
           {filteredActivities.map((activity) => (
             <div
               key={activity.id}
-              className="group flex items-start gap-3 rounded-lg border border-gray-100 p-4 transition-all hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-sm"
+              role="button"
+              tabIndex={0}
+              onClick={() => handleActivityClick(activity)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleActivityClick(activity);
+                }
+              }}
+              className="group flex cursor-pointer items-start gap-3 rounded-lg border border-gray-100 p-4 transition-all hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-sm"
             >
               {/* Actor Avatar */}
               <Avatar className="h-9 w-9 shrink-0">

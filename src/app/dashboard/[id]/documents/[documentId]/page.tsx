@@ -136,6 +136,12 @@ export default async function DocumentPage({
   }
 
   const canEdit = isOwner || member?.permissions.includes(WORKSPACE_PERMISSION.DOCUMENTS_EDIT);
+  const canUseGitHubSync =
+    isOwner ||
+    Boolean(member?.permissions.includes(WORKSPACE_PERMISSION.GITHUB_VIEW)) ||
+    Boolean(member?.permissions.includes(WORKSPACE_PERMISSION.GITHUB_IMPORT)) ||
+    Boolean(member?.permissions.includes(WORKSPACE_PERMISSION.GITHUB_EXPORT)) ||
+    Boolean(member?.permissions.includes(WORKSPACE_PERMISSION.GITHUB_CONFIGURE));
 
   return (
     <AuroraBackground showGrids showGlowOrbs>
@@ -180,6 +186,7 @@ export default async function DocumentPage({
               workspaceId={workspaceId}
               documentPhase={document.phase}
               documentType={document.type}
+              canUseGitHubSync={canUseGitHubSync}
             />
 
             <Link href="/dashboard">
@@ -232,6 +239,7 @@ export default async function DocumentPage({
               <DocumentEditor
                 document={document}
                 canEdit={canEdit}
+                canUseGitHubSync={canUseGitHubSync}
                 workspaceId={workspaceId}
                 session={session}
               />

@@ -125,6 +125,12 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
     userPermissions.includes(WORKSPACE_PERMISSION.DOCUMENTS_CREATE) ||
     userPermissions.includes(WORKSPACE_PERMISSION.DOCUMENTS_EDIT);
   const canViewMembers = isOwner || userPermissions.includes(WORKSPACE_PERMISSION.MEMBERS_VIEW);
+  const canUseGitHubSync =
+    isOwner ||
+    userPermissions.includes(WORKSPACE_PERMISSION.GITHUB_VIEW) ||
+    userPermissions.includes(WORKSPACE_PERMISSION.GITHUB_IMPORT) ||
+    userPermissions.includes(WORKSPACE_PERMISSION.GITHUB_EXPORT) ||
+    userPermissions.includes(WORKSPACE_PERMISSION.GITHUB_CONFIGURE);
 
   return (
     <AuroraBackground showGrids showGlowOrbs>
@@ -148,6 +154,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
               workspaceId={workspace.id}
               workspaceName={workspace.name}
               workspaceDescription={workspace.description || ''}
+              workspaceMemberLimit={workspace.memberLimit}
               isOwner={isOwner}
               canManage={canEditWorkspace}
             />
@@ -168,7 +175,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <WorkspaceGitHubSyncDialog workspaceId={workspace.id} />
+                  {canUseGitHubSync && <WorkspaceGitHubSyncDialog workspaceId={workspace.id} />}
                   {canCreateDocuments && <CreateDocumentDialog workspaceId={workspace.id} />}
                 </div>
               </div>

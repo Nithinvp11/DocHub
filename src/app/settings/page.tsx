@@ -128,6 +128,12 @@ export default function SettingsPage() {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [transferWorkspaceId, setTransferWorkspaceId] = useState<string>('');
   const [newOwnerId, setNewOwnerId] = useState<string>('');
+  const [showDeleteWorkspaceDialog, setShowDeleteWorkspaceDialog] = useState(false);
+  const [deleteWorkspaceTarget, setDeleteWorkspaceTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteWorkspaceConfirmation, setDeleteWorkspaceConfirmation] = useState('');
 
   // Password strength indicators
   const passwordStrength = {
@@ -276,29 +282,39 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteWorkspace = async (workspaceId: string, workspaceName: string) => {
-    if (
-      !confirm(`Are you sure you want to delete "${workspaceName}"? This action cannot be undone.`)
-    ) {
+  const handleDeleteWorkspace = (workspaceId: string, workspaceName: string) => {
+    setDeleteWorkspaceTarget({ id: workspaceId, name: workspaceName });
+    setDeleteWorkspaceConfirmation('');
+    setShowDeleteWorkspaceDialog(true);
+  };
+
+  const closeDeleteWorkspaceDialog = () => {
+    setShowDeleteWorkspaceDialog(false);
+    setDeleteWorkspaceTarget(null);
+    setDeleteWorkspaceConfirmation('');
+  };
+
+  const handleConfirmDeleteWorkspace = async () => {
+    if (!deleteWorkspaceTarget) {
       return;
     }
 
-    const confirmation = prompt('Type the workspace name to confirm deletion:');
-    if (confirmation !== workspaceName) {
+    if (deleteWorkspaceConfirmation !== deleteWorkspaceTarget.name) {
       toast.error('Workspace name does not match');
       return;
     }
 
-    setDeletingWorkspace(workspaceId);
+    setDeletingWorkspace(deleteWorkspaceTarget.id);
 
     try {
-      const res = await fetch('/api/workspaces/' + workspaceId + '/settings', {
+      const res = await fetch('/api/workspaces/' + deleteWorkspaceTarget.id + '/settings', {
         method: 'DELETE',
       });
 
       if (res.ok) {
         toast.success('Workspace deleted successfully');
-        setWorkspaces(workspaces.filter((w) => w.id !== workspaceId));
+        setWorkspaces(workspaces.filter((w) => w.id !== deleteWorkspaceTarget.id));
+        closeDeleteWorkspaceDialog();
       } else {
         const error = await res.json();
         toast.error(error.error || 'Failed to delete workspace');
@@ -1301,7 +1317,7 @@ export default function SettingsPage() {
                   setTransferWorkspaceId('');
                   setNewOwnerId('');
                 }}
-                className="border-white/20 text-white hover:bg-white/10"
+                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
               >
                 Cancel
               </Button>
@@ -1319,6 +1335,105 @@ export default function SettingsPage() {
                   <>
                     <ArrowLeftRight className="mr-2 h-4 w-4" />
                     Transfer Ownership
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Workspace Dialog */}
+        <Dialog
+          open={showDeleteWorkspaceDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              closeDeleteWorkspaceDialog();
+              return;
+            }
+            setShowDeleteWorkspaceDialog(true);
+          }}
+        >
+          <DialogContent className="border-red-500/20 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                Delete Workspace
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                This action permanently deletes the workspace, documents, versions, and comments.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+                <p className="text-xs tracking-wide text-red-300 uppercase">Workspace to delete</p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {deleteWorkspaceTarget?.name}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-sm text-amber-200">
+                  Type the workspace name exactly to confirm deletion.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deleteWorkspaceName" className="text-white">
+                  Confirmation
+                </Label>
+                <Input
+                  id="deleteWorkspaceName"
+                  value={deleteWorkspaceConfirmation}
+                  onChange={(event) => setDeleteWorkspaceConfirmation(event.target.value)}
+                  placeholder={deleteWorkspaceTarget?.name || 'Workspace name'}
+                  className="border-white/15 bg-slate-900/60 text-white placeholder:text-slate-500"
+                  autoComplete="off"
+                />
+                {deleteWorkspaceTarget && deleteWorkspaceConfirmation.length > 0 && (
+                  <p
+                    className={`text-xs ${
+                      deleteWorkspaceConfirmation === deleteWorkspaceTarget.name
+                        ? 'text-emerald-300'
+                        : 'text-red-300'
+                    }`}
+                  >
+                    {deleteWorkspaceConfirmation === deleteWorkspaceTarget.name
+                      ? 'Name matches. Deletion is unlocked.'
+                      : 'Name does not match.'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={closeDeleteWorkspaceDialog}
+                disabled={deletingWorkspace === deleteWorkspaceTarget?.id}
+                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDeleteWorkspace}
+                disabled={
+                  !deleteWorkspaceTarget ||
+                  deleteWorkspaceConfirmation !== deleteWorkspaceTarget.name ||
+                  deletingWorkspace === deleteWorkspaceTarget.id
+                }
+                className="bg-linear-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700"
+              >
+                {deletingWorkspace === deleteWorkspaceTarget?.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Permanently
                   </>
                 )}
               </Button>

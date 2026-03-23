@@ -210,73 +210,113 @@ export async function DELETE(req: NextRequest) {
     // Step 3: Delete database records in proper order
     console.log('[Delete Account] Deleting database records...');
 
-    // Delete owned workspaces (cascade will handle most relations)
-    if (user.ownedWorkspaces.length > 0) {
-      console.log(`[Delete Account] Deleting ${user.ownedWorkspaces.length} owned workspaces...`);
-      await prisma.workspace.deleteMany({
-        where: { ownerId: session.user.id },
+    await prisma.$transaction(async (tx) => {
+      // Delete owned workspaces first (cascades workspace-scoped data).
+      if (user.ownedWorkspaces.length > 0) {
+        console.log(`[Delete Account] Deleting ${user.ownedWorkspaces.length} owned workspaces...`);
+        await tx.workspace.deleteMany({
+          where: { ownerId: session.user.id },
+        });
+      }
+
+      // Remove documents still authored by this user in non-owned/shared workspaces.
+      await tx.document.deleteMany({
+        where: { authorId: session.user.id },
       });
-    }
+      console.log('[Delete Account] Deleted authored documents');
 
-    // Delete workspace memberships (for workspaces user doesn't own)
-    await prisma.workspaceMember.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted workspace memberships');
+      // Remove remaining records that hold required FK references to user.
+      await tx.inlineCommentReply.deleteMany({
+        where: { authorId: session.user.id },
+      });
 
-    // Delete GitHub tokens and integrations
-    await prisma.gitHubAuth.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted GitHub tokens');
+      await tx.inlineComment.deleteMany({
+        where: {
+          OR: [{ authorId: session.user.id }, { resolvedById: session.user.id }],
+        },
+      });
 
-    // Delete notification preferences
-    await prisma.notificationPreferences.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted notification preferences');
+      await tx.comment.deleteMany({
+        where: { authorId: session.user.id },
+      });
 
-    // Delete mentions
-    await prisma.mention.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted mentions');
+      await tx.version.deleteMany({
+        where: { authorId: session.user.id },
+      });
 
-    // Delete favorites
-    await prisma.userFavorite.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted favorites');
+      await tx.documentTemplate.deleteMany({
+        where: { authorId: session.user.id },
+      });
+      console.log('[Delete Account] Deleted authored references (versions/comments/templates)');
 
-    // Delete recent documents
-    await prisma.recentDocument.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted recent documents');
+      // Cleanup user-linked supporting records.
+      await tx.workspaceMember.deleteMany({
+        where: { userId: session.user.id },
+      });
+      console.log('[Delete Account] Deleted workspace memberships');
 
-    // Delete presence records
-    await prisma.presence.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted presence records');
+      await tx.gitHubAuth.deleteMany({
+        where: { userId: session.user.id },
+      });
+      console.log('[Delete Account] Deleted GitHub tokens');
 
-    // Delete document locks
-    await prisma.documentLock.deleteMany({
-      where: { userId: session.user.id },
-    });
-    console.log('[Delete Account] Deleted document locks');
+      await tx.notificationPreferences.deleteMany({
+        where: { userId: session.user.id },
+      });
+      console.log('[Delete Account] Deleted notification preferences');
 
-    // Delete feedback
-    await prisma.feedback.deleteMany({
-      where: {
-        OR: [{ userId: session.user.id }, { assignedTo: session.user.id }],
-      },
-    });
-    console.log('[Delete Account] Deleted feedback');
+      await tx.mention.deleteMany({
+        where: { userId: session.user.id },
+      });
 
-    // Step 4: Finally delete the user (cascade will handle remaining relations)
-    await prisma.user.delete({
-      where: { id: session.user.id },
+      await tx.userFavorite.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.workspaceFavorite.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.recentDocument.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.presence.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.documentLock.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.loginEvent.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.account.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      await tx.session.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      // Keep others' feedback intact by unassigning this user where needed.
+      await tx.feedback.updateMany({
+        where: { assignedTo: session.user.id },
+        data: { assignedTo: null },
+      });
+
+      // Remove feedback submitted by this user.
+      await tx.feedback.deleteMany({
+        where: { userId: session.user.id },
+      });
+      console.log('[Delete Account] Deleted user feedback and unassigned admin assignments');
+
+      // Finally delete the user row.
+      await tx.user.delete({
+        where: { id: session.user.id },
+      });
     });
 
     console.log(`[Delete Account] Successfully deleted account for user: ${session.user.id}`);

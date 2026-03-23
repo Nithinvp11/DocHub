@@ -36,6 +36,8 @@ export default function WorkspaceGitHubSettingsPage() {
   const [syncing, setSyncing] = useState(false);
   const [fetchingIntegration, setFetchingIntegration] = useState(true);
   const [integration, setIntegration] = useState<WorkspaceGitHubIntegration | null>(null);
+  const [githubConnected, setGithubConnected] = useState<boolean>(false);
+  const [checkingGitHubAuth, setCheckingGitHubAuth] = useState<boolean>(true);
   const [syncSummary, setSyncSummary] = useState<OperationSummary | null>(null);
   const [repository, setRepository] = useState('');
   const [branch, setBranch] = useState('main');
@@ -43,8 +45,50 @@ export default function WorkspaceGitHubSettingsPage() {
 
   useEffect(() => {
     fetchIntegration();
+    checkWorkspaceGitHubAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
+
+  const checkWorkspaceGitHubAuth = async () => {
+    setCheckingGitHubAuth(true);
+    try {
+      const response = await fetch(`/api/github/check-auth?workspaceId=${workspaceId}`, {
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        setGithubConnected(false);
+        return;
+      }
+
+      const data = await response.json();
+      setGithubConnected(Boolean(data.connected));
+    } catch (error) {
+      console.error('Error checking workspace GitHub auth:', error);
+      setGithubConnected(false);
+    } finally {
+      setCheckingGitHubAuth(false);
+    }
+  };
+
+  const handleConnectGitHub = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/github/auth?workspaceId=${workspaceId}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.authUrl) {
+        toast.error(data.error || 'Failed to start GitHub authentication');
+        return;
+      }
+
+      window.location.href = data.authUrl;
+    } catch (error) {
+      console.error('Error initiating GitHub auth:', error);
+      toast.error('Failed to start GitHub authentication');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchIntegration = async () => {
     setFetchingIntegration(true);
@@ -157,6 +201,13 @@ export default function WorkspaceGitHubSettingsPage() {
       return;
     }
 
+    if (!githubConnected) {
+      toast.error(
+        'No GitHub account is connected to this workspace. Connect GitHub first in workspace settings.'
+      );
+      return;
+    }
+
     if (
       !confirm(
         'Import all markdown files from your GitHub repository into this workspace? Any existing files with the same path will be skipped.'
@@ -183,7 +234,8 @@ export default function WorkspaceGitHubSettingsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to import');
+        toast.error(data.error || 'Failed to import');
+        return;
       }
 
       setSyncSummary({
@@ -212,6 +264,13 @@ export default function WorkspaceGitHubSettingsPage() {
       return;
     }
 
+    if (!githubConnected) {
+      toast.error(
+        'No GitHub account is connected to this workspace. Connect GitHub first in workspace settings.'
+      );
+      return;
+    }
+
     if (
       !confirm(
         'Export all documents to your GitHub repository? Documents without a GitHub path will be skipped.'
@@ -237,7 +296,8 @@ export default function WorkspaceGitHubSettingsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to export');
+        toast.error(data.error || 'Failed to export');
+        return;
       }
 
       setSyncSummary({
@@ -467,10 +527,31 @@ export default function WorkspaceGitHubSettingsPage() {
                 </div>
               </div>
 
+              {!checkingGitHubAuth && !githubConnected && (
+                <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4">
+                  <div className="space-y-3 text-sm text-amber-100">
+                    <p className="font-medium">GitHub account connection required</p>
+                    <p className="text-amber-200/90">
+                      No GitHub account is currently connected for this workspace. Any member with
+                      GitHub permissions can connect one account before import/export can run.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleConnectGitHub}
+                      disabled={loading}
+                      className="bg-amber-500/20 text-amber-100 hover:bg-amber-500/30"
+                    >
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Connect GitHub Account
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <Button
                   onClick={handleImport}
-                  disabled={syncing}
+                  disabled={syncing || checkingGitHubAuth || !githubConnected}
                   className="flex-1 bg-linear-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700"
                 >
                   {syncing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -479,7 +560,7 @@ export default function WorkspaceGitHubSettingsPage() {
 
                 <Button
                   onClick={handleExport}
-                  disabled={syncing}
+                  disabled={syncing || checkingGitHubAuth || !githubConnected}
                   className="flex-1 bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700"
                 >
                   {syncing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

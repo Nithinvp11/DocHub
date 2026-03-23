@@ -8,9 +8,11 @@ import {
   markdownToHtml,
   createGitHubClient,
 } from '@/lib/github';
+import { decryptToken } from '@/lib/encryption';
 import { deriveTitleFromMarkdownPath } from '@/lib/github-path-utils';
 import { z } from 'zod';
 import { ActivityTracker } from '@/lib/activity';
+import { resolveWorkspaceGitHubAuth } from '@/lib/github-workspace-auth';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -60,22 +62,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 403 });
     }
 
-    // Get GitHub auth token
-    const githubAuth = await prisma.gitHubAuth.findUnique({
-      where: {
-        userId_workspaceId: {
-          userId: user.id,
-          workspaceId: data.workspaceId,
-        },
-      },
-    });
+    // Get GitHub auth token — falls back to owner or any connected workspace member
+    const githubAuth = await resolveWorkspaceGitHubAuth(data.workspaceId, user.id);
 
     if (!githubAuth) {
-      return NextResponse.json({ error: 'GitHub not linked' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            'No GitHub account is connected to this workspace. A member with GitHub permissions must connect a GitHub account in workspace GitHub settings.',
+        },
+        { status: 400 }
+      );
     }
 
+    const decryptedToken = decryptToken(githubAuth.accessToken);
     const [owner, repo] = data.githubRepository.split('/');
-    const octokit = createGitHubClient(githubAuth.accessToken);
+    const octokit = createGitHubClient(decryptedToken);
 
     // Get repository tree
     const { data: refData } = await octokit.git.getRef({
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Fetch content
-        const fileData = await getFileContent(owner, repo, file.path, githubAuth.accessToken);
+        const fileData = await getFileContent(owner, repo, file.path, decryptedToken);
 
         if (!fileData) {
           errors.push({

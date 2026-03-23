@@ -7,11 +7,15 @@ import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { sanitizeText, sanitizeMarkdown } from '@/lib/sanitize';
 import { PAGINATION_LIMITS } from '@/lib/constants';
 import { ActivityTracker } from '@/lib/activity';
-import { generateUniqueGitHubPath } from '@/lib/github-path-utils';
+import {
+  generateUniqueGitHubPath,
+  generateUniqueGitHubPathFromCustom,
+} from '@/lib/github-path-utils';
 import {
   assertDocumentPathAvailable,
   DocumentPathConflictError,
   generateUniqueDocumentPath,
+  sanitizeCustomPath,
 } from '@/lib/document-path-utils';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
@@ -139,7 +143,7 @@ export async function POST(req: NextRequest) {
     // Sanitize inputs
     const sanitizedTitle = sanitizeText(title);
     const sanitizedContent = sanitizeMarkdown(content);
-    const sanitizedPath = path ? sanitizeText(path) : undefined;
+    const sanitizedPath = path ? sanitizeCustomPath(sanitizeText(path)) : undefined;
     const targetPhase = phase || 'PLANNING';
     const targetType = type || 'GENERAL';
 
@@ -160,13 +164,15 @@ export async function POST(req: NextRequest) {
 
     await assertDocumentPathAvailable({ workspaceId, path: finalPath });
 
-    // Generate unique GitHub path
-    const githubPath = await generateUniqueGitHubPath({
-      phase: targetPhase,
-      type: targetType,
-      title: sanitizedTitle,
-      workspaceId,
-    });
+    // Generate unique GitHub path — derive from custom path when provided
+    const githubPath = sanitizedPath
+      ? await generateUniqueGitHubPathFromCustom(sanitizedPath, workspaceId)
+      : await generateUniqueGitHubPath({
+          phase: targetPhase,
+          type: targetType,
+          title: sanitizedTitle,
+          workspaceId,
+        });
 
     const document = await prisma.document.create({
       data: {

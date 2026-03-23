@@ -1,9 +1,9 @@
 import { getCurrentUser } from '@/lib/session';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/prisma';
 import { listUserRepositories } from '@/lib/github';
 import { decryptToken } from '@/lib/encryption';
+import { resolveWorkspaceGitHubAuth } from '@/lib/github-workspace-auth';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
@@ -24,15 +24,8 @@ export async function GET(req: NextRequest) {
   try {
     await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_VIEW);
 
-    // Get GitHub auth token
-    const githubAuth = await prisma.gitHubAuth.findUnique({
-      where: {
-        userId_workspaceId: {
-          userId: user.id,
-          workspaceId,
-        },
-      },
-    });
+    // Get GitHub auth token — falls back to owner or any connected workspace member
+    const githubAuth = await resolveWorkspaceGitHubAuth(workspaceId, user.id);
 
     if (!githubAuth) {
       return NextResponse.json({ error: 'GitHub not linked' }, { status: 400 });

@@ -6,6 +6,7 @@ import { z } from 'zod';
 const searchSchema = z.object({
   q: z.string().min(1),
   workspaceId: z.string().optional(),
+  includeWorkspaceMembers: z.coerce.boolean().optional().default(false),
   limit: z.coerce.number().min(1).max(50).default(10),
   email: z.string().email().optional(),
   id: z.string().optional(),
@@ -35,9 +36,87 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email');
     const username = searchParams.get('username');
     const id = searchParams.get('id');
+    const workspaceId = searchParams.get('workspaceId');
+    const includeWorkspaceMembers = searchParams.get('includeWorkspaceMembers') === 'true';
+
+    const getWorkspaceAccessContext = async () => {
+      if (!workspaceId) {
+        return null;
+      }
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          ownerId: true,
+          members: {
+            where: {
+              userId: currentUser.id,
+            },
+            select: {
+              id: true,
+            },
+            take: 1,
+          },
+        },
+      });
+
+      if (!workspace) {
+        throw new Error('WORKSPACE_NOT_FOUND');
+      }
+
+      if (workspace.ownerId !== currentUser.id && workspace.members.length === 0) {
+        throw new Error('WORKSPACE_ACCESS_DENIED');
+      }
+
+      return workspace;
+    };
+
+    const getWorkspaceMembership = async (targetUserId: string) => {
+      if (!workspaceId) {
+        return null;
+      }
+
+      const [workspace, membership] = await Promise.all([
+        prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { ownerId: true },
+        }),
+        prisma.workspaceMember.findFirst({
+          where: {
+            workspaceId,
+            userId: targetUserId,
+          },
+          select: { id: true },
+        }),
+      ]);
+
+      if (!workspace) {
+        return null;
+      }
+
+      return {
+        isWorkspaceOwner: workspace.ownerId === targetUserId,
+        isWorkspaceMember: Boolean(membership) || workspace.ownerId === targetUserId,
+      };
+    };
 
     // If specific email or id is provided, do a direct lookup
     if (email || username || id) {
+      try {
+        await getWorkspaceAccessContext();
+      } catch (workspaceError) {
+        if (workspaceError instanceof Error) {
+          if (workspaceError.message === 'WORKSPACE_NOT_FOUND') {
+            return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+          }
+
+          if (workspaceError.message === 'WORKSPACE_ACCESS_DENIED') {
+            return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 });
+          }
+        }
+        throw workspaceError;
+      }
+
       const directFilters = [] as Array<Record<string, unknown>>;
       if (email) {
         directFilters.push({ email: { equals: email, mode: 'insensitive' as const } });
@@ -67,12 +146,22 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      return NextResponse.json(foundUser);
+      const workspaceMembership = await getWorkspaceMembership(foundUser.id);
+
+      return NextResponse.json({
+        ...foundUser,
+        label: foundUser.name || foundUser.email,
+        ...(workspaceMembership || {
+          isWorkspaceOwner: false,
+          isWorkspaceMember: false,
+        }),
+      });
     }
 
     const params = searchSchema.parse({
       q: searchParams.get('q'),
-      workspaceId: searchParams.get('workspaceId'),
+      workspaceId,
+      includeWorkspaceMembers,
       limit: searchParams.get('limit'),
     });
 
@@ -89,44 +178,56 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // If workspace specified, only search workspace members
+    // If workspace specified, default to excluding existing members so invite flows can surface
+    // "already exists" in the UI instead of returning them as valid invite targets.
     let users;
     if (params.workspaceId) {
-      // Verify user has access to workspace
-      const membership = await prisma.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: params.workspaceId,
-            userId: currentUser.id,
-          },
-        },
-      });
+      let workspace;
+      try {
+        workspace = await getWorkspaceAccessContext();
+      } catch (workspaceError) {
+        if (workspaceError instanceof Error) {
+          if (workspaceError.message === 'WORKSPACE_NOT_FOUND') {
+            return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+          }
 
-      if (!membership) {
-        return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 });
+          if (workspaceError.message === 'WORKSPACE_ACCESS_DENIED') {
+            return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 });
+          }
+        }
+        throw workspaceError;
       }
 
-      // Search workspace members
-      const members = await prisma.workspaceMember.findMany({
+      const workspaceMembers = await prisma.workspaceMember.findMany({
+        where: { workspaceId: params.workspaceId },
+        select: { userId: true },
+      });
+      const workspaceMemberIds = new Set(workspaceMembers.map((member) => member.userId));
+
+      const baseWhere = {
+        ...searchFilter,
+        ...(params.includeWorkspaceMembers
+          ? {}
+          : {
+              id: {
+                notIn: [workspace!.ownerId, ...Array.from(workspaceMemberIds)],
+              },
+            }),
+      };
+
+      users = await prisma.user.findMany({
         where: {
-          workspaceId: params.workspaceId,
-          user: searchFilter,
+          ...baseWhere,
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          image: true,
         },
         take: params.limit,
       });
-
-      users = members.map((m) => m.user);
     } else {
       // Search all users (for platform-wide mentions)
       users = await prisma.user.findMany({
@@ -150,6 +251,8 @@ export async function GET(request: NextRequest) {
         email: u.email,
         image: u.image,
         label: u.name || u.email,
+        isWorkspaceMember: false,
+        isWorkspaceOwner: false,
       })),
     });
   } catch (error) {

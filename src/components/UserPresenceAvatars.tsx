@@ -66,7 +66,14 @@ export function UserPresenceAvatars({
         );
         if (response.ok) {
           const data = await response.json();
-          setPresenceUsers(data.users.filter((u: PresenceUser) => u.userId !== currentUserId));
+          // Deduplicate by userId (guards against multiple presence rows for same user)
+          const seen = new Set<string>();
+          const unique = (data.users as PresenceUser[]).filter((u) => {
+            if (seen.has(u.userId)) return false;
+            seen.add(u.userId);
+            return true;
+          });
+          setPresenceUsers(unique.filter((u) => u.userId !== currentUserId && u.isEditing));
         }
       } catch (error) {
         console.error('Failed to fetch presence:', error);
@@ -254,47 +261,6 @@ export function UserPresenceAvatars({
             </div>
           </AnimatePresence>
         </div>
-
-        {/* Summary Badge */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className="cursor-pointer gap-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <Users className="h-3 w-3" />
-              <span className="text-xs font-medium">{presenceUsers.length}</span>
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="space-y-2">
-            {editingUsers.length > 0 && (
-              <div className="space-y-1">
-                <p className="flex items-center gap-1 text-xs font-semibold">
-                  <Edit3 className="h-3 w-3 text-amber-500" />
-                  Editing ({editingUsers.length})
-                </p>
-                <ul className="text-muted-foreground space-y-0.5 text-xs">
-                  {editingUsers.map((user) => (
-                    <li key={user.userId}>• {getDisplayName(user)}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {viewingUsers.length > 0 && (
-              <div className="space-y-1">
-                <p className="flex items-center gap-1 text-xs font-semibold">
-                  <Eye className="h-3 w-3 text-blue-500" />
-                  Viewing ({viewingUsers.length})
-                </p>
-                <ul className="text-muted-foreground space-y-0.5 text-xs">
-                  {viewingUsers.map((user) => (
-                    <li key={user.userId}>• {getDisplayName(user)}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </TooltipContent>
-        </Tooltip>
       </TooltipProvider>
 
       {/* User Cursors (if enabled) */}

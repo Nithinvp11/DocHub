@@ -326,7 +326,7 @@ export default function Home() {
                 <div className="rounded-premium mb-4 w-fit bg-linear-to-br from-fuchsia-500/20 to-pink-500/20 p-3 backdrop-blur-sm">
                   <GitBranch className="h-6 w-6 text-fuchsia-300" />
                 </div>
-                <PremiumCardTitle className="text-white">Git-Like Versioning</PremiumCardTitle>
+                <PremiumCardTitle className="text-white">Versioning</PremiumCardTitle>
                 <PremiumCardDescription className="text-purple-200/70">
                   Track every change with automatic version history and easy rollback capabilities
                 </PremiumCardDescription>

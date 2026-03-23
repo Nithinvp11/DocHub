@@ -10,8 +10,12 @@ import {
   assertDocumentPathAvailable,
   DocumentPathConflictError,
   generateUniqueDocumentPath,
+  sanitizeCustomPath,
 } from '@/lib/document-path-utils';
-import { generateUniqueGitHubPath } from '@/lib/github-path-utils';
+import {
+  generateUniqueGitHubPath,
+  generateUniqueGitHubPathFromCustom,
+} from '@/lib/github-path-utils';
 
 const saveAsSchema = z.object({
   title: z.string().min(1).max(200),
@@ -80,9 +84,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Check write permission on target workspace
     await assertPermission(user.id, targetWorkspaceId, WORKSPACE_PERMISSION.DOCUMENTS_CREATE);
 
+    // Sanitize custom path if provided
+    const customPath = data.path ? sanitizeCustomPath(data.path) : undefined;
+
     // Generate unique path if not provided
     const path =
-      data.path ||
+      customPath ||
       (await generateUniqueDocumentPath({
         workspaceId: targetWorkspaceId,
         phase: targetPhase,
@@ -90,19 +97,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         title: data.title,
       }));
 
-    if (data.path) {
+    if (customPath) {
       await assertDocumentPathAvailable({
         workspaceId: targetWorkspaceId,
-        path: data.path,
+        path: customPath,
       });
     }
 
-    const githubPath = await generateUniqueGitHubPath({
-      workspaceId: targetWorkspaceId,
-      phase: targetPhase,
-      type: targetType,
-      title: data.title,
-    });
+    // Derive githubPath from custom path if provided, else from phase/type/title
+    const githubPath = customPath
+      ? await generateUniqueGitHubPathFromCustom(customPath, targetWorkspaceId)
+      : await generateUniqueGitHubPath({
+          workspaceId: targetWorkspaceId,
+          phase: targetPhase,
+          type: targetType,
+          title: data.title,
+        });
 
     // Create new document with content from source
     const newDocument = await prisma.document.create({

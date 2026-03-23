@@ -284,7 +284,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (phase) updateData.phase = phase;
     if (type) updateData.type = type;
     if (path) updateData.path = path;
-    if (content) updateData.content = content;
+    if (content !== undefined) updateData.content = content;
     if (githubPath !== undefined) updateData.githubPath = githubPath || null;
     if (githubSha !== undefined) updateData.githubSha = githubSha || null;
 
@@ -336,7 +336,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     // If "Replace" (no new version), update the latest version's content in-place
-    if (content && content !== document.content && !createVersion && !isAutoSave && !isDraft) {
+    if (
+      content !== undefined &&
+      content !== document.content &&
+      !createVersion &&
+      !isAutoSave &&
+      !isDraft
+    ) {
       const latestVersion = document.versions[0];
       if (latestVersion) {
         const sha = CryptoJS.SHA256(content).toString().substring(0, 7);
@@ -347,8 +353,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    let versionCreated = false;
+
     // Create new version if content changed AND createVersion is true
-    if (content && content !== document.content && createVersion) {
+    if (content !== undefined && content !== document.content && createVersion) {
       // For auto-saves, use generic message; for manual saves, require message
       const versionMessage = isAutoSave ? 'Auto-save' : message || 'Update document';
 
@@ -389,6 +397,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           isDraft: isDraft || false,
         },
       });
+      versionCreated = true;
 
       // Track version creation activity (only for manual saves)
       if (!isAutoSave) {
@@ -410,7 +419,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updatedDocument.title
     );
 
-    return NextResponse.json(updatedDocument);
+    return NextResponse.json({
+      ...updatedDocument,
+      versionCreated,
+    });
   } catch (error) {
     if (error instanceof WorkspacePermissionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

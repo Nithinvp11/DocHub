@@ -4,8 +4,8 @@ import { getCurrentUser } from '@/lib/session';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
 import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
-const LOCK_TIMEOUT_MINUTES = 2; // Lock expires quickly to avoid stale lock blocking others
-const LOCK_EXTENSION_MINUTES = 2; // Extend lock by 2 minutes on heartbeat
+const LOCK_TIMEOUT_MINUTES = 5; // Lock expires after 5 minutes
+const LOCK_EXTENSION_MINUTES = 5; // Extend lock by 5 minutes on heartbeat
 
 // GET - Check lock status for a document
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

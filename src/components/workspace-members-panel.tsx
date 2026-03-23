@@ -38,6 +38,9 @@ import { formatDistanceToNow } from 'date-fns';
 import {
   WORKSPACE_PERMISSION,
   WORKSPACE_PERMISSION_OPTIONS,
+  PERMISSION_PACK_DEFINITIONS,
+  getSelectedPacks,
+  type PermissionPack,
   type WorkspacePermission,
 } from '@/lib/workspace-permission-definitions';
 import { PermissionPackPicker } from '@/components/permission-pack-picker';
@@ -73,6 +76,8 @@ interface UserSearchResult {
   email: string;
   image: string | null;
   username?: string | null;
+  isWorkspaceMember?: boolean;
+  isWorkspaceOwner?: boolean;
 }
 
 interface WorkspaceInvite {
@@ -137,6 +142,17 @@ const PERMISSION_LABEL_MAP = new Map<string, string>(
   WORKSPACE_PERMISSION_OPTIONS.map((permission) => [permission.id, permission.label])
 );
 
+const PERMISSION_PACK_MAP = new Map(PERMISSION_PACK_DEFINITIONS.map((pack) => [pack.id, pack]));
+
+const PACK_COLOR_CLASSES: Record<string, string> = {
+  blue: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
+  purple: 'border-purple-500/20 bg-purple-500/10 text-purple-400',
+  green: 'border-green-500/20 bg-green-500/10 text-green-400',
+  orange: 'border-orange-500/20 bg-orange-500/10 text-orange-400',
+  amber: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
+  slate: 'border-slate-500/20 bg-slate-500/10 text-slate-300',
+};
+
 export function WorkspaceMembersPanel({
   workspaceId,
   userPermissions,
@@ -172,12 +188,6 @@ export function WorkspaceMembersPanel({
   const [invites, setInvites] = useState<WorkspaceInvite[]>([]);
   const [inviteActionId, setInviteActionId] = useState<string | null>(null);
   const [inviteActionType, setInviteActionType] = useState<'resend' | 'cancel' | null>(null);
-  const [expandedInvitePermissions, setExpandedInvitePermissions] = useState<
-    Record<string, boolean>
-  >({});
-  const [expandedMemberPermissions, setExpandedMemberPermissions] = useState<
-    Record<string, boolean>
-  >({});
 
   const canInviteMembers =
     !!isOwner || userPermissions.includes(WORKSPACE_PERMISSION.MEMBERS_INVITE);
@@ -256,8 +266,8 @@ export function WorkspaceMembersPanel({
     try {
       // Search for user via API using email or username lookup
       const queryParam = trimmedIdentifier.includes('@')
-        ? `email=${encodeURIComponent(trimmedIdentifier)}`
-        : `username=${encodeURIComponent(trimmedIdentifier)}`;
+        ? `email=${encodeURIComponent(trimmedIdentifier)}&workspaceId=${encodeURIComponent(workspaceId)}&includeWorkspaceMembers=true`
+        : `username=${encodeURIComponent(trimmedIdentifier)}&workspaceId=${encodeURIComponent(workspaceId)}&includeWorkspaceMembers=true`;
       const res = await fetch(`/api/users/search?${queryParam}`);
 
       if (res.ok) {
@@ -265,6 +275,17 @@ export function WorkspaceMembersPanel({
         const matchedUser = data?.users?.[0] ?? (data?.id ? data : null);
         if (!matchedUser) {
           toast.error('User not found');
+          return;
+        }
+
+        if (matchedUser.isWorkspaceOwner) {
+          toast.error('This user is the workspace owner');
+          return;
+        }
+
+        if (matchedUser.isWorkspaceMember) {
+          setFoundUser(matchedUser);
+          toast.error('This member already exists in the workspace');
           return;
         }
 
@@ -288,6 +309,11 @@ export function WorkspaceMembersPanel({
 
   const handleAddMember = async () => {
     if (!foundUser || !canInviteMembers) return;
+
+    if (foundUser.isWorkspaceMember || foundUser.isWorkspaceOwner) {
+      toast.error('This member already exists in the workspace');
+      return;
+    }
 
     if (selectedPermissions.length === 0) {
       toast.error('Please select at least one permission');
@@ -657,6 +683,13 @@ export function WorkspaceMembersPanel({
                         {foundUser.username && (
                           <p className="text-xs text-slate-500">@{foundUser.username}</p>
                         )}
+                        {(foundUser.isWorkspaceMember || foundUser.isWorkspaceOwner) && (
+                          <p className="mt-2 text-xs font-medium text-amber-400">
+                            {foundUser.isWorkspaceOwner
+                              ? 'This user is already the workspace owner.'
+                              : 'This user is already a workspace member.'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -714,7 +747,10 @@ export function WorkspaceMembersPanel({
                   }}
                   className="flex-1 bg-linear-to-r from-purple-600 to-fuchsia-600 text-white hover:shadow-lg hover:shadow-purple-600/20"
                   disabled={
-                    loading || (addStep === 'permissions' && selectedPermissions.length === 0)
+                    loading ||
+                    (addStep === 'confirm' &&
+                      Boolean(foundUser?.isWorkspaceMember || foundUser?.isWorkspaceOwner)) ||
+                    (addStep === 'permissions' && selectedPermissions.length === 0)
                   }
                 >
                   {addStep === 'search' && (searchingUser ? 'Searching...' : 'Search User')}
@@ -799,48 +835,36 @@ export function WorkspaceMembersPanel({
                         )}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {(expandedMemberPermissions[member.id]
-                          ? member.permissions || []
-                          : (member.permissions || []).slice(0, 2)
-                        ).map((perm) => {
-                          const permissionLabel = PERMISSION_LABEL_MAP.get(perm) || perm;
-                          const permissionIcon = PERMISSION_ICON_MAP[
-                            perm as WorkspacePermission
-                          ] ?? <Settings className="h-2.5 w-2.5" />;
+                        {(() => {
+                          const memberPermissions = (member.permissions ||
+                            []) as WorkspacePermission[];
+                          const packIds = getSelectedPacks(memberPermissions);
+                          const packs = packIds
+                            .map((packId) => PERMISSION_PACK_MAP.get(packId as PermissionPack))
+                            .filter(Boolean);
 
-                          return (
-                            <span
-                              key={perm}
-                              className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-400"
-                            >
-                              <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{permissionIcon}</span>
-                              {permissionLabel}
-                            </span>
-                          );
-                        })}
-                        {(member.permissions || []).length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedMemberPermissions((prev) => ({
-                                ...prev,
-                                [member.id]: !prev[member.id],
-                              }))
-                            }
-                            className="inline-flex items-center gap-0.5 rounded-full border border-slate-600/30 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:border-purple-500/30 hover:bg-purple-500/10 hover:text-purple-400"
-                          >
-                            {expandedMemberPermissions[member.id] ? (
-                              <>
-                                <ChevronUp className="h-2.5 w-2.5" /> Less
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="h-2.5 w-2.5" /> +
-                                {(member.permissions || []).length - 2} more
-                              </>
-                            )}
-                          </button>
-                        )}
+                          if (packs.length === 0) {
+                            return (
+                              <span className="inline-flex items-center rounded-full border border-slate-600/30 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                                Custom Access
+                              </span>
+                            );
+                          }
+
+                          return packs.map((pack) => {
+                            const colorClass =
+                              PACK_COLOR_CLASSES[pack!.color] || PACK_COLOR_CLASSES.slate;
+                            return (
+                              <span
+                                key={pack!.id}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${colorClass}`}
+                              >
+                                <span>{pack!.icon}</span>
+                                {pack!.name}
+                              </span>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -910,11 +934,6 @@ export function WorkspaceMembersPanel({
                   const isCancelled = invite.status === 'CANCELLED';
                   const isActionLoading = inviteActionId === invite.id;
                   const statusLabel = isCancelled ? 'Cancelled' : isExpired ? 'Expired' : 'Pending';
-                  const isPermissionsExpanded = Boolean(expandedInvitePermissions[invite.id]);
-                  const visiblePermissions = isPermissionsExpanded
-                    ? invite.permissions
-                    : invite.permissions.slice(0, 3);
-                  const hiddenPermissionsCount = Math.max(invite.permissions.length - 3, 0);
                   const inviteDisplayName =
                     invite.invitedUser?.name || invite.invitedEmail || 'Unknown';
                   const inviteInitial = inviteDisplayName.charAt(0).toUpperCase();
@@ -1016,42 +1035,36 @@ export function WorkspaceMembersPanel({
                       {invite.permissions.length > 0 && (
                         <div className="mt-3 pl-14">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {visiblePermissions.map((permission) => {
-                              const label = PERMISSION_LABEL_MAP.get(permission) || permission;
-                              const permIcon = PERMISSION_ICON_MAP[
-                                permission as WorkspacePermission
-                              ] ?? <Settings className="h-2.5 w-2.5" />;
-                              return (
-                                <span
-                                  key={permission}
-                                  className="inline-flex items-center gap-1 rounded-full border border-purple-500/25 bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-300"
-                                >
-                                  <span className="opacity-70 [&>svg]:h-2.5 [&>svg]:w-2.5">
-                                    {permIcon}
+                            {(() => {
+                              const invitePermissions = invite.permissions as WorkspacePermission[];
+                              const packIds = getSelectedPacks(invitePermissions);
+                              const packs = packIds
+                                .map((packId) => PERMISSION_PACK_MAP.get(packId as PermissionPack))
+                                .filter(Boolean);
+
+                              if (packs.length === 0) {
+                                return (
+                                  <span className="inline-flex items-center rounded-full border border-slate-600/40 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                                    Custom Access
                                   </span>
-                                  {label}
-                                </span>
-                              );
-                            })}
-                            {hiddenPermissionsCount > 0 && !isPermissionsExpanded && (
-                              <span className="inline-flex items-center rounded-full border border-slate-600/40 bg-slate-700/30 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                                +{hiddenPermissionsCount} more
-                              </span>
-                            )}
-                            {invite.permissions.length > 3 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedInvitePermissions((prev) => ({
-                                    ...prev,
-                                    [invite.id]: !prev[invite.id],
-                                  }))
-                                }
-                                className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-cyan-400 transition-colors hover:text-cyan-300"
-                              >
-                                {isPermissionsExpanded ? 'Show less' : 'Show all'}
-                              </button>
-                            )}
+                                );
+                              }
+
+                              return packs.map((pack) => {
+                                const colorClass =
+                                  PACK_COLOR_CLASSES[pack!.color] || PACK_COLOR_CLASSES.slate;
+
+                                return (
+                                  <span
+                                    key={pack!.id}
+                                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${colorClass}`}
+                                  >
+                                    <span>{pack!.icon}</span>
+                                    {pack!.name}
+                                  </span>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                       )}

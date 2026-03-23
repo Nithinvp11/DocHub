@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ interface DocumentEditorProps {
     favorites?: Array<{ id: string }>;
   };
   canEdit: boolean;
+  canUseGitHubSync: boolean;
   workspaceId: string;
   session: Session | null;
 }
@@ -59,7 +60,13 @@ function normalizeEditorContent(html: string): string {
   return html.replace(/\s+/g, ' ').replace(/> </g, '><').trim();
 }
 
-export function DocumentEditor({ document, canEdit, workspaceId, session }: DocumentEditorProps) {
+export function DocumentEditor({
+  document,
+  canEdit,
+  canUseGitHubSync,
+  workspaceId,
+  session,
+}: DocumentEditorProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(document.content);
@@ -251,6 +258,8 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
       setHasChanges(normalizedNewContent !== savedContent);
       setWordStats(calculateWordStats(plainText));
 
+      markLockActivity();
+
       const { from } = editor.state.selection;
       const textBefore = editor.state.doc.textBetween(Math.max(0, from - 60), from, ' ', ' ');
       const mentionMatch = textBefore.match(/@(\w*)$/);
@@ -290,6 +299,7 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
     lockInfo,
     isLoading: lockLoading,
     error: lockError,
+    markLockActivity,
     acquireLock,
     releaseLock,
   } = useDocumentLock({
@@ -377,6 +387,25 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
 
     cleanupStaleLock();
   }, [document.id]);
+
+  // Presence heartbeat — register current user as viewing/editing this document
+  useEffect(() => {
+    const updatePresence = () => {
+      fetch(`/api/workspaces/${workspaceId}/documents/${document.id}/presence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        keepalive: true,
+      }).catch(() => {
+        // Ignore presence failures — non-critical
+      });
+    };
+
+    updatePresence();
+    const interval = window.setInterval(updatePresence, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [document.id, workspaceId]);
 
   useEffect(() => {
     setContent(document.content);
@@ -524,7 +553,11 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
       .chain()
       .focus()
       .deleteRange({ from: mentionRange.from, to: mentionRange.to })
-      .insertContent(`@${handle} `)
+      .insertMention({
+        id: member.id,
+        label: handle,
+      })
+      .insertContent(' ')
       .run();
 
     setMentionQuery(null);
@@ -632,8 +665,9 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
         }),
       });
 
+      const data = await response.json();
+
       if (response.status === 423) {
-        const data = await response.json();
         toast.error(data.error || 'Document is locked by another user');
         setIsEditing(false);
         await releaseLock();
@@ -641,9 +675,14 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
       }
 
       if (!response.ok) {
-        const data = await response.json();
         setError(data.error || 'Failed to save document');
         toast.error(data.error || 'Failed to save document');
+        return;
+      }
+
+      if (!data.versionCreated) {
+        setError('No content changes detected, so no new version was created');
+        toast.error('No content changes detected, so no new version was created');
         return;
       }
 
@@ -708,6 +747,33 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
       return;
     }
     // isEditing will be set to true by onLockAcquired callback
+  };
+
+  const handleReadOnlyLinkClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isEditing) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
+    if (!href) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (href.startsWith('/')) {
+      window.location.assign(href);
+      return;
+    }
+
+    window.open(href, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -833,15 +899,17 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
 
               {isEditing ? (
                 <>
-                  <Button
-                    onClick={() => setShowGitHubSyncDialog(true)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 border-white/20 bg-slate-900/60 text-slate-100 hover:border-purple-400/50 hover:bg-slate-800/90 hover:text-white"
-                  >
-                    <Github className="h-4 w-4" />
-                    Create PR
-                  </Button>
+                  {canUseGitHubSync && (
+                    <Button
+                      onClick={() => setShowGitHubSyncDialog(true)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 border-white/20 bg-slate-900/60 text-slate-100 hover:border-purple-400/50 hover:bg-slate-800/90 hover:text-white"
+                    >
+                      <Github className="h-4 w-4" />
+                      GitHub Sync
+                    </Button>
+                  )}
                   <Button
                     onClick={handleCancel}
                     variant="outline"
@@ -999,7 +1067,8 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
             </div>
           )}
           <div
-            className={`rounded-2xl border border-white/10 bg-linear-to-br from-slate-900/80 via-slate-900/70 to-slate-800/80 shadow-2xl ${!isEditing ? 'pointer-events-none opacity-70' : ''}`}
+            onClickCapture={handleReadOnlyLinkClick}
+            className={`rounded-2xl border border-white/10 bg-linear-to-br from-slate-900/80 via-slate-900/70 to-slate-800/80 shadow-2xl ${!isEditing ? 'opacity-70' : ''}`}
           >
             <div className="prose prose-invert max-w-none">
               <ErrorBoundary
@@ -1029,13 +1098,15 @@ export function DocumentEditor({ document, canEdit, workspaceId, session }: Docu
         onClose={() => setShowCommandPalette(false)}
       />
 
-      <DocumentGitHubSync
-        documentId={document.id}
-        workspaceId={workspaceId}
-        documentTitle={document.title}
-        open={showGitHubSyncDialog}
-        onOpenChange={setShowGitHubSyncDialog}
-      />
+      {canUseGitHubSync && (
+        <DocumentGitHubSync
+          documentId={document.id}
+          workspaceId={workspaceId}
+          documentTitle={document.title}
+          open={showGitHubSyncDialog}
+          onOpenChange={setShowGitHubSyncDialog}
+        />
+      )}
     </GlassCard>
   );
 }

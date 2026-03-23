@@ -90,6 +90,15 @@ export const resolveGrantRootForDelegation = (
     return actorUserId;
   }
 
+  // First delegated layer becomes the root of its own subtree.
+  // Example:
+  // Owner -> Nisha (depth 1)
+  // Nisha invites Bob => Bob grantRootId should be Nisha, not Owner
+  // Bob invites Nithin => Nithin should keep grantRootId = Nisha
+  if ((actorAccess.grantDepth ?? 0) <= 1) {
+    return actorUserId;
+  }
+
   return actorAccess.grantRootId ?? actorUserId;
 };
 

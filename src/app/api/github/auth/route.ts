@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateGitHubAuthUrl } from '@/lib/github';
 import crypto from 'crypto';
 import { WORKSPACE_PERMISSION } from '@/lib/workspace-permission-definitions';
-import { assertPermission, WorkspacePermissionError } from '@/lib/workspace-permissions';
+import { getWorkspaceAccess, WorkspacePermissionError } from '@/lib/workspace-permissions';
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +21,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
     }
 
-    await assertPermission(user.id, workspaceId, WORKSPACE_PERMISSION.GITHUB_CONFIGURE);
+    const access = await getWorkspaceAccess(user.id, workspaceId);
+    const hasGitHubAccess =
+      access.isOwner ||
+      access.permissions.some((permission) =>
+        [
+          WORKSPACE_PERMISSION.GITHUB_VIEW,
+          WORKSPACE_PERMISSION.GITHUB_IMPORT,
+          WORKSPACE_PERMISSION.GITHUB_EXPORT,
+          WORKSPACE_PERMISSION.GITHUB_CONFIGURE,
+        ].includes(permission)
+      );
+
+    if (!hasGitHubAccess) {
+      throw new WorkspacePermissionError(
+        'Missing required GitHub permission: github:view, github:import, github:export, or github:configure',
+        403
+      );
+    }
 
     // Generate state parameter to prevent CSRF
     const state = crypto.randomBytes(32).toString('hex');

@@ -22,6 +22,7 @@ interface UseDocumentLockOptions {
 
 const HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds
 const LOCK_CHECK_INTERVAL = 15 * 1000; // 15 seconds
+const TYPING_ACTIVITY_WINDOW_MS = 60 * 1000; // Extend lock only if user typed in last 60s
 
 export function useDocumentLock({
   documentId,
@@ -40,6 +41,12 @@ export function useDocumentLock({
   const isAcquiringRef = useRef(false);
   const hasLockRef = useRef(false);
   const documentIdRef = useRef(documentId);
+  const lastUnavailableUserIdRef = useRef<string | null>(null);
+  const lastTypingActivityAtRef = useRef<number>(Date.now());
+
+  const markLockActivity = useCallback(() => {
+    lastTypingActivityAtRef.current = Date.now();
+  }, []);
 
   // Start heartbeat to keep lock alive
   const startHeartbeat = useCallback(() => {
@@ -51,13 +58,26 @@ export function useDocumentLock({
 
     // Set new interval
     heartbeatIntervalRef.current = setInterval(async () => {
+      // Only keep extending while user is actively typing/editing.
+      // If idle, stop extending and let server-side timeout expire the lock.
+      const recentlyActive =
+        Date.now() - lastTypingActivityAtRef.current <= TYPING_ACTIVITY_WINDOW_MS;
+      if (!recentlyActive) {
+        return;
+      }
+
       try {
         const response = await fetch(`/api/documents/${documentId}/lock`, {
           method: 'PATCH',
         });
 
         if (!response.ok) {
-          console.error('Failed to extend lock');
+          // Losing a lock can be a normal race condition (tab hidden, lock expired,
+          // user permissions changed, or another session reclaimed). Avoid noisy
+          // console.error output that triggers the Next.js dev overlay.
+          if (response.status !== 403 && response.status !== 404) {
+            console.warn(`Failed to extend lock (status ${response.status})`);
+          }
           if (heartbeatIntervalRef.current) {
             clearInterval(heartbeatIntervalRef.current);
             heartbeatIntervalRef.current = undefined;
@@ -66,7 +86,7 @@ export function useDocumentLock({
           onLockLost?.();
         }
       } catch (err) {
-        console.error('Heartbeat failed:', err);
+        console.warn('Heartbeat failed:', err instanceof Error ? err.message : String(err));
         if (heartbeatIntervalRef.current) {
           clearInterval(heartbeatIntervalRef.current);
           heartbeatIntervalRef.current = undefined;
@@ -111,6 +131,7 @@ export function useDocumentLock({
 
       if (data.locked && data.isOwnLock) {
         if (!hasLock) {
+          markLockActivity();
           setHasLock(true);
           startHeartbeat();
         }
@@ -120,7 +141,14 @@ export function useDocumentLock({
       }
 
       if (data.locked && data.lock && !data.isOwnLock && !hasLock) {
-        onLockUnavailable?.(data);
+        // Only notify once per distinct lock holder — suppress repeated polling toasts
+        const lockerId = data.lock.userId;
+        if (lastUnavailableUserIdRef.current !== lockerId) {
+          lastUnavailableUserIdRef.current = lockerId;
+          onLockUnavailable?.(data);
+        }
+      } else if (!data.locked || data.isOwnLock) {
+        lastUnavailableUserIdRef.current = null;
       }
 
       return data;
@@ -184,6 +212,7 @@ export function useDocumentLock({
       }
 
       // Lock acquired successfully
+      markLockActivity();
       setHasLock(true);
       setLockInfo({ locked: true, lock: data.lock });
       onLockAcquired?.();
@@ -207,7 +236,7 @@ export function useDocumentLock({
       setIsLoading(false);
       isAcquiringRef.current = false;
     }
-  }, [documentId, onLockAcquired, onLockUnavailable, startHeartbeat]);
+  }, [documentId, markLockActivity, onLockAcquired, onLockUnavailable, startHeartbeat]);
 
   // Extend lock (heartbeat)
   const extendLock = useCallback(async () => {
@@ -370,6 +399,7 @@ export function useDocumentLock({
     lockInfo,
     isLoading,
     error,
+    markLockActivity,
     acquireLock,
     releaseLock,
     checkLockStatus,

@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
-import Suggestion, { SuggestionOptions } from '@tiptap/suggestion';
+import { SuggestionOptions } from '@tiptap/suggestion';
 
 export interface MentionOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -129,16 +129,11 @@ export const Mention = Node.create<MentionOptions>({
   renderHTML({ node, HTMLAttributes }) {
     return [
       'span',
-      mergeAttributes(
-        { 'data-type': this.name },
-        this.options.HTMLAttributes,
-        HTMLAttributes,
-        {
-          class: 'mention',
-          style:
-            'background-color: rgba(59, 130, 246, 0.1); color: #2563eb; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-weight: 500;',
-        }
-      ),
+      mergeAttributes({ 'data-type': this.name }, this.options.HTMLAttributes, HTMLAttributes, {
+        class: 'mention',
+        style:
+          'background-color: rgba(59, 130, 246, 0.1); color: #2563eb; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-weight: 500;',
+      }),
       this.options.renderLabel({
         options: this.options,
         node,
@@ -168,11 +163,7 @@ export const Mention = Node.create<MentionOptions>({
           state.doc.nodesBetween(anchor - 1, anchor, (node, pos) => {
             if (node.type.name === this.name) {
               isMention = true;
-              tr.insertText(
-                this.options.suggestion.char || '',
-                pos,
-                pos + node.nodeSize
-              );
+              tr.insertText(this.options.suggestion.char || '', pos, pos + node.nodeSize);
 
               return false;
             }
@@ -184,12 +175,10 @@ export const Mention = Node.create<MentionOptions>({
   },
 
   addProseMirrorPlugins() {
-    return [
-      Suggestion({
-        editor: this.editor,
-        ...this.options.suggestion,
-      }),
-    ];
+    // Mention selection UI is handled by document-editor.tsx (mentionQuery + insertMention).
+    // Do not register TipTap's Suggestion plugin here, otherwise '@' keystrokes
+    // can be intercepted before our custom workflow sees them.
+    return [];
   },
 
   addCommands() {

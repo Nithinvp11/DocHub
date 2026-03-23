@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Hide Next.js development indicator badge
+  devIndicators: false,
+
   // Enable gzip compression
   compress: true,
 

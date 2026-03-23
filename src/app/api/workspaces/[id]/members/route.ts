@@ -35,6 +35,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const actorAccess = await assertPermission(user.id, id, WORKSPACE_PERMISSION.MEMBERS_VIEW);
 
+    // Get workspace owner and all members
+    const workspace = await prisma.workspace.findUnique({
+      where: { id },
+      select: {
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    });
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+    }
+
     const members = await prisma.workspaceMember.findMany({
       where: {
         workspaceId: id,
@@ -54,9 +74,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
+    // Add workspace owner if not already a member
+    const ownerIds = new Set(members.map((m) => m.userId));
+    const allMembers = ownerIds.has(workspace.ownerId)
+      ? members
+      : [
+          {
+            id: `owner-${workspace.ownerId}`,
+            userId: workspace.ownerId,
+            workspaceId: id,
+            permissions: [],
+            grantedById: null,
+            grantRootId: null,
+            grantDepth: 0,
+            createdAt: new Date(),
+            user: workspace.owner,
+          },
+          ...members,
+        ];
+
     const delegationUserIds = Array.from(
       new Set(
-        members
+        allMembers
           .flatMap((member) => [member.grantedById, member.grantRootId])
           .filter((value): value is string => !!value)
       )
@@ -71,7 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const delegationUserMap = new Map(delegationUsers.map((item) => [item.id, item]));
 
-    const responseMembers = members.map((member) => {
+    const responseMembers = allMembers.map((member) => {
       const grantedBy = member.grantedById ? delegationUserMap.get(member.grantedById) : null;
       const grantRoot = member.grantRootId ? delegationUserMap.get(member.grantRootId) : null;
 
@@ -96,6 +135,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(responseMembers);
   } catch (error) {
+    if (error instanceof WorkspacePermissionError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     console.error('Error fetching workspace members:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

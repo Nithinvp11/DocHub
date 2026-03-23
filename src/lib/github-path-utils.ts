@@ -101,6 +101,55 @@ export async function generateUniqueGitHubPath(
 }
 
 /**
+ * Convert a custom document path to a GitHub file path.
+ * Strips leading slash, appends .md extension.
+ * e.g. /onboarding/sop -> onboarding/sop.md
+ */
+export function githubPathFromCustomPath(customPath: string): string {
+  const stripped = customPath.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!stripped) return 'documents/untitled.md';
+  if (/\.(md|markdown|mdx)$/i.test(stripped)) return stripped;
+  return `${stripped}.md`;
+}
+
+/**
+ * Generate a unique GitHub file path derived from a custom document path.
+ * Appends -2, -3, ... suffix before the extension if conflicts exist.
+ */
+export async function generateUniqueGitHubPathFromCustom(
+  customPath: string,
+  workspaceId: string,
+  excludeDocumentId?: string
+): Promise<string> {
+  const base = githubPathFromCustomPath(customPath);
+  const withoutExt = base.replace(/\.md$/, '');
+
+  const existingDoc = await prisma.document.findFirst({
+    where: {
+      workspaceId,
+      githubPath: base,
+      ...(excludeDocumentId ? { id: { not: excludeDocumentId } } : {}),
+    },
+  });
+
+  if (!existingDoc) return base;
+
+  let suffix = 2;
+  while (true) {
+    const uniquePath = `${withoutExt}-${suffix}.md`;
+    const conflict = await prisma.document.findFirst({
+      where: {
+        workspaceId,
+        githubPath: uniquePath,
+        ...(excludeDocumentId ? { id: { not: excludeDocumentId } } : {}),
+      },
+    });
+    if (!conflict) return uniquePath;
+    suffix++;
+  }
+}
+
+/**
  * Update githubPath for an existing document
  */
 export async function updateDocumentGitHubPath(
